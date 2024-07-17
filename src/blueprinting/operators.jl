@@ -1,59 +1,29 @@
 
+# Singleton that keeps record of the avaiable operators for reduction accesible by code and name
 let
-    global get_operator
 
-    averages = [
+    operator_by_id::Vector{Operator} = Operator[
         Operator(
             "average",
             Float64,
             Float64,
-            0
-        ),
+            1,
+            :average
+        )
     ]
 
-    medians = [
-        Operator(
-            "median",
-            Float64,
-            Float64,
-            0
-        ),
-    ]
+    operator_by_name::Dict{Symbol,Operator} = Dict{Symbol,Operator}([i.symbol => i for i in operator_by_id])
 
-    maximums = [
-        Operator(
-            "maximum",
-            Float64,
-            Float64,
-            0
-        ),
-    ]
 
-    minimums = [
-        Operator(
-            "minimum",
-            Float64,
-            Float64,
-            0
-        ),
-    ]
+    #global parseOperator;
 
-    samples = [
-        Operator(
-            "sample",
-            Float64,
-            Float64,
-            0
-        ),
-    ]
-
-    operators::Dict{String, Vector{Operator}} = Dict([
-        "average" => averages,
-        "median" => medians,
-        "maximum" => maximums,
-        "minimum" => minimums,
-        "sample" => samples
-    ])
-
-    get_operator(name::String, in :: Type, out:: Type) = operators[name][1]
+    global function parseOperator(operator_alias::Union{Symbol,String,Int})
+        if operator_alias isa Int
+            return operator_by_id[operator_alias]
+        elseif operator_alias isa Symbol
+            return operator_by_name[operator_alias]
+        else
+            return operator_by_name[Symbol(operator_alias)]
+        end
+    end
 end

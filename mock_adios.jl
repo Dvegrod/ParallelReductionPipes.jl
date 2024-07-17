@@ -14,7 +14,6 @@ struct SerializedShardedMatrix{N}
     grid :: Vector{Int}
     position :: Vector{Int}
 
-
     values :: Array{N, 4,4}
 end
 
@@ -52,18 +51,10 @@ let
     #     _position = position
     # end
 
-    function write_matrix(matrix :: Array)
-        new = SerializedShardedMatrix{_type}(
-            _size,
-            _rank,
-            _shape,
-            [i for i in size(matrix)],
-            _grid,
-            _position,
-            matrix
-        )
-        f = h5open(_foldername * "/" * "$_rank.view", "w")
-        f["SSM"] = new
+    function write_matrix(foldername :: String, matrix :: Array, rank :: Int)
+        f = h5open(foldername * "/" * "$rank.view", "w")
+        size = size(matrix)
+        f["SSM"] = 
         close(f)
     end
 

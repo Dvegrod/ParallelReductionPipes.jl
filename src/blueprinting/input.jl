@@ -14,7 +14,7 @@ function input(var_name, engine_name, config_file, var_shape :: Union{AbstractAr
         var_name,
         engine_name,
         config_file,
-        shape,
+        [i for i in shape],
         var_type in supported_types ? var_type : throw(ErrorException("Unsupported type $var_type"))
     )
 
