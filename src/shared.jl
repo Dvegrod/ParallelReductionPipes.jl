@@ -60,12 +60,13 @@ end
 
 
 function _get(io::ADIOS2.AIO, engine::ADIOS2.Engine, key::Symbol)::Any
-    if key in metadata
-        y = inquire_variable(io, var_repository[key].name)
+    if key in keys(metadata)
+        y = inquire_variable(io, metadata[key].name)
 
         if isnothing(y)
-            e = ArgumentError("Invalid key $key, value is not available on the specified IO")
-            throw(e)
+            #e = ArgumentError("Invalid key $key, value is not available on the specified IO")
+            #throw(e)
+            return nothing
         end
 
         sh = shape(y)

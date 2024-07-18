@@ -12,7 +12,7 @@ global logfile = undef
 # Requires write mode
 function ready(io :: ADIOS2.AIO, engine :: ADIOS2.Engine, comm :: MPI.Comm)
 
-    if MPI.Comm_rank(comm) == 0
+    if MPI.Comm_rank(comm) == 1
         var = metadata[:exec_ready]
         declare_and_set(io, engine, var, 1)
         @warn "READY"
@@ -28,7 +28,7 @@ function listen(io::ADIOS2.AIO, engine::ADIOS2.Engine, comm::MPI.Comm)::Bool
         for _ in 1:TRIALS
             config_ready = _get(io, engine, :ready)
 
-            if config_ready > 0
+            if config_ready != nothing
                 bool = true
                 break
             end
@@ -132,91 +132,23 @@ function main()
 
     # ADIOS INIT COMMUNICATION STREAM
     adios = adios_init_mpi(MPI.COMM_WORLD)
-    comm_io = declare_io(adios, "OUTCOMMIO")
+    comm_io = declare_io(adios, "OUTCOMMIO_WRITE")
 
     comm_engine = open(comm_io, "reducer.bp", mode_write)
 
-    # ready(comm_io, comm_engine, MPI.COMM_WORLD)
-
-    # close(comm_engine)
-    # comm_engine = open(comm_io, "reducer.bp", mode_readRandomAccess)
-
-    # # LISTEN FOR CONFIGURATION ARRIVAL
-    # if !listen(comm_io, comm_engine, MPI.COMM_WORLD)
-    #     error("Listen timeout, $TRIALS trials.")
-    # end
-
-    # # Logger
-    # if flags["--log"]
-    #     logfile = open("./reducer-logs.log", mode_write)
-    # end
-
-    # # Get pipeline config
-    # pipeline_vars = inquirePipelineConfigurationStructure(comm_io)
-    # pipeline_config = getPipelineConfigurationStructure(comm_engine, pipeline_vars)
-
-    # # ADIOS INIT INPUT STREAM
-    # input_io = declare_io(adios, "INPUT_IO")
-
-    # input_engine = open(input_io, pipeline_config[:engine], mode_readRandomAccess)
-
-    # # ADIOS INIT OUTPUT STREAM
-    # output_io = declare_io(adios, "OUTPUT_IO")
-
-    # output_engine = open(output_io, pipeline_config[:engine], mode_readRandomAccess)
-
-    # # Execute pipeline
-
-    # # INPUT CHUNK
-    # output = get_input(input_io, input_engine, pipeline_config[:var_name])
-    # # PROCESS CHUNK
-    # for i in 1:pipeline_vars[:n_layers]
-    #     output = execute_layer(output, pipeline_config[:layer_info][i])
-    # end
-    # # OUTPUT CHUNK
-    # submit_output(output_io, output_engine, output)
+    ready(comm_io, comm_engine, MPI.COMM_WORLD)
 
     close(comm_engine)
-    MPI.Finalize()
 
-end
+    comm_io2 = declare_io(adios, "OUTCOMMIO_READ")
 
+    comm_engine = open(comm_io2, "reducer.bp", mode_readRandomAccess)
 
-function mainv2()
-    # Initialization
-    # Parallel stencil
-
-    # MPI
-    MPI.Init()
-
-    rank = MPI.Comm_rank(MPI.COMM_WORLD)
-    size = MPI.Comm_size(MPI.COMM_WORLD)
-
-
-    # Flag parse
-    for i in ARGS
-        if i in keys(flags)
-            # Switch flag
-            flags[i] = !flags[i]
-        end
+    # LISTEN FOR CONFIGURATION ARRIVAL
+    if !listen(comm_io, comm_engine, MPI.COMM_WORLD)
+        error("Listen timeout, $TRIALS trials.")
     end
 
-    # ADIOS INIT COMMUNICATION STREAM
-    adios = adios_init_mpi(MPI.COMM_WORLD)
-    comm_io = declare_io(adios, "OUTCOMMIO")
-
-    comm_engine = open(comm_io, "reducer.bp", mode_write)
-
-    # ready(comm_io, comm_engine, MPI.COMM_WORLD)
-
-    # close(comm_engine)
-    # comm_engine = open(comm_io, "reducer.bp", mode_readRandomAccess)
-
-    # # LISTEN FOR CONFIGURATION ARRIVAL
-    # if !listen(comm_io, comm_engine, MPI.COMM_WORLD)
-    #     error("Listen timeout, $TRIALS trials.")
-    # end
-
     # # Logger
     # if flags["--log"]
     #     logfile = open("./reducer-logs.log", mode_write)
@@ -225,6 +157,7 @@ function mainv2()
     # # Get pipeline config
     # pipeline_vars = inquirePipelineConfigurationStructure(comm_io)
     # pipeline_config = getPipelineConfigurationStructure(comm_engine, pipeline_vars)
+    # @show pipeline_config
 
     # # ADIOS INIT INPUT STREAM
     # input_io = declare_io(adios, "INPUT_IO")
@@ -251,3 +184,4 @@ function mainv2()
     MPI.Finalize()
 
 end
+
