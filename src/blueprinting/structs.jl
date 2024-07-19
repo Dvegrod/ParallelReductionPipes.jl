@@ -46,7 +46,18 @@ metadata = Dict([
     :ready      => Var("config_ready", Int, []),
     :exec_ready => Var("reducer_ready", Int, []),
     :stop       => Var("stop"        , Int, []),
+    :debug      => Var("debug"       , Int, [])
 ])
+
+# Debug:
+#    0: normal execution
+#    1: ready handshake between launcher and execution and exit execution (when reducer_ready = 2)
+# Reducer ready (runtime writes here):
+#    1: runtime is listening for pipeline configuration
+#    2: runtime got configuration, pipeline start
+# Config ready (launcher writes here):
+#    1: launcher has posted the pipeline configuration
+
 
 var_repository = Dict([
     :engine       => Var("input_engine", String, []),

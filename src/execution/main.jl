@@ -10,12 +10,16 @@ flags = Dict{String,Bool}([
 global logfile = undef
 
 # Requires write mode
-function ready(io :: ADIOS2.AIO, engine :: ADIOS2.Engine, comm :: MPI.Comm)
+function ready(io :: ADIOS2.AIO, engine :: ADIOS2.Engine, comm :: MPI.Comm, ready_val :: Int)
 
-    if MPI.Comm_rank(comm) == 1
+    if MPI.Comm_rank(comm) == 2
         var = metadata[:exec_ready]
-        declare_and_set(io, engine, var, 1)
-        @warn "READY"
+        if ready_val == 1
+            declare_and_set(io, engine, var, 1)
+        else
+            _set(io, engine, var, ready_val)
+        end
+        @warn "READY $ready_val"
     end
     MPI.Barrier(comm)
 end
@@ -136,7 +140,7 @@ function main()
 
     comm_engine = open(comm_io, "reducer.bp", mode_write)
 
-    ready(comm_io, comm_engine, MPI.COMM_WORLD)
+    ready(comm_io, comm_engine, MPI.COMM_WORLD, 1)
 
     close(comm_engine)
 
@@ -158,6 +162,8 @@ function main()
     pipeline_vars = inquirePipelineConfigurationStructure(comm_io)
     pipeline_config = getPipelineConfigurationStructure(comm_engine, pipeline_vars)
     @show pipeline_config
+
+    ready(comm_io, comm_engine, MPI.COMM_WORLD, 2)
 
     # # ADIOS INIT INPUT STREAM
     #input_io = declare_io(adios, "INPUT_IO")

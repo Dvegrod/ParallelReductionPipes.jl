@@ -46,26 +46,25 @@ function exportPipelineConfiguration(adios_engine :: ADIOS2.Engine,
     err = perform_puts!(adios_engine)
     @assert err === error_none
 
-    put!(adios_engine, metadata[:ready], 1)
-
-    err = perform_puts!(adios_engine)
-    @assert err === error_none
-
     return
 end
 
 
-function build(builder :: PipelineBuilder)
+function build(builder::PipelineBuilder)
 
     adios = adios_init_serial()
-    io = declare_io(adios ,"COMM_IO")
+    io = declare_io(adios, "COMM_IO")
     engine = open(io, "reducer.bp", mode_write)
+
+    defineMetadata(io)
 
     definePipelineConfigurationStructure(io)
 
     vars = inquirePipelineConfigurationStructure(io)
 
     exportPipelineConfiguration(engine, vars, builder)
+
+    _set(io, engine, :ready, 1)
 
     close(engine)
 end

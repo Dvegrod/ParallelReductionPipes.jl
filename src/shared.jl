@@ -1,4 +1,35 @@
 
+macro check_for_val_w_timeout(func :: Expr, val :: Any, time_sec :: Int)
+
+    f = eval(func)
+
+    return quote
+	      for i in 1:time_sec
+            r = f()
+            if r !== nothing && r == $val
+                return true
+            end
+        end
+        return false
+    end
+end
+
+# Defines the variables used to comunicate status
+function defineMetadata(adios_io::ADIOS2.AIO)
+    #TODO
+    for (_, var) in metadata
+        if length(var.shape) > 0
+            sh = Tuple(var.shape)
+            st = Tuple([0 for i in var.shape])
+            cn = Tuple(var.shape)
+        else
+            sh = nothing
+            st = nothing
+            cn = nothing
+        end
+        define_variable(adios_io, var.name, var.type, sh, st, cn)
+    end
+end
 # Defines the variables used to comunicate a pipeline configuration
 function definePipelineConfigurationStructure(adios_io::ADIOS2.AIO)
     #TODO
@@ -90,9 +121,9 @@ function _get(io::ADIOS2.AIO, engine::ADIOS2.Engine, key::Symbol)::Any
     end
 end
 
-function set(io::ADIOS2.IO, engine::ADIOS2.Engine, key::Symbol, value::Any)
-    if key in metadata
-        y = inquire_variable(io, var_repository[key].name)
+function _set(io::ADIOS2.AIO, engine::ADIOS2.Engine, key::Symbol, value::Any)
+    if key in keys(metadata)
+        y = inquire_variable(io, metadata[key].name)
 
         if isnothing(y)
             e = ArgumentError("Invalid key $key, value is not available on the specified IO")
