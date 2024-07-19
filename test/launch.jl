@@ -31,5 +31,5 @@ launchcmd = `$(MPI.mpiexec()) -n 4 julia --project=".." ../src/reducer.jl`
     success(p)
 end
 
-f = open(out)
-@show read(out, String)
+
+@show out
