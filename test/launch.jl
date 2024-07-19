@@ -2,7 +2,7 @@
 using MPI
 
 out = "$dirname/out.txt"
-launchcmd = `$(MPI.mpiexec()) -n 4 julia --project=".." ../src/reducer.jl ">" $out`
+launchcmd = `$(MPI.mpiexec()) -n 4 julia --project=".." ../src/reducer.jl`
 
 @info "Launch command for launch test: $launchcmd"
 
@@ -15,7 +15,7 @@ launchcmd = `$(MPI.mpiexec()) -n 4 julia --project=".." ../src/reducer.jl ">" $o
     builder = reduction(builder, ker1, :average)
 
     # Launch
-    p = run(launchcmd; wait=false)
+    p = run(pipeline(launchcmd, out); wait=false)
     reducer.build(builder)
 
     adios = adios_init_serial()
