@@ -36,7 +36,7 @@ function slicer1D(pos::Int, side_size::Int, ker :: Int, nchunks::Int)::Tuple{Int
 
     @assert 0 <= pos < nchunks
 
-    @static slice_mode == :v1 ? quote
+    @static slice_mode == :v1 ? begin
         # V1 : perfect matching
         chunk_size = div(side_size, nchunks)
         last_chunk_size = chunk_size + mod(side_size, chunk_size)
@@ -53,9 +53,9 @@ function slicer1D(pos::Int, side_size::Int, ker :: Int, nchunks::Int)::Tuple{Int
         end
 
         return (start, size, _end)
-    end : quote end
+    end : begin end
 
-    @static slice_mode == :v2 ? quote
+    @static slice_mode == :v2 ? begin
         # V2 : domain might not be divisible by kernel
         # EXAMPLE:
         # Size: 9
@@ -69,14 +69,14 @@ function slicer1D(pos::Int, side_size::Int, ker :: Int, nchunks::Int)::Tuple{Int
         # 1  1  2  2  3
 
         out_size = div(side_size, ker, RoundUp)
-        chunk_size = div(outn, nchunks, RoundUp) * ker
+        chunk_size = div(out_size, nchunks, RoundUp) * ker
 
         start = pos * chunk_size
 
         local _end
         if pos == (nchunks - 1)
             last_ker_size = mod1(side_size, ker)
-            last_chunk_size = mod1(outn, nchunks) * ker - ker + last_ker_size
+            last_chunk_size = mod1(out_size, nchunks) * ker - ker + last_ker_size
 
             size = last_chunk_size
             _end = side_size
@@ -86,7 +86,7 @@ function slicer1D(pos::Int, side_size::Int, ker :: Int, nchunks::Int)::Tuple{Int
         end
 
         return (start, size, _end)
-    end : quote end
+    end : begin end
 end
 
 

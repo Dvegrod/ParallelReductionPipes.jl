@@ -3,7 +3,7 @@ export PipelineBuilder, reduction, input, kernel, build
 
 using MPI
 using ADIOS2
-using ImplicitGlobalGrid
+#using ImplicitGlobalGrid
 using ParallelStencil
 
 @init_parallel_stencil(Threads, Float64, 3)
