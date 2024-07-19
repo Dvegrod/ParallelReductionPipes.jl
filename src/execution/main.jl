@@ -16,7 +16,7 @@ function ready(io :: ADIOS2.AIO, engine :: ADIOS2.Engine, comm :: MPI.Comm, read
         if ready_val == 1
             declare_and_set(io, engine, var, 1)
         else
-            _set(io, engine, var, ready_val)
+            _set(io, engine, :exec_ready, ready_val)
         end
         @warn "READY $ready_val"
     end
@@ -143,14 +143,12 @@ function main()
 
     ready(comm_io, comm_engine, MPI.COMM_WORLD, 1)
 
-    close(comm_engine)
-
     comm_io2 = declare_io(adios, "OUTCOMMIO_READ")
 
-    comm_engine = open(comm_io2, "reducer-l.bp", mode_readRandomAccess)
+    comm_engine2 = open(comm_io2, "reducer-l.bp", mode_readRandomAccess)
 
     # LISTEN FOR CONFIGURATION ARRIVAL
-    if !listen(comm_io2, comm_engine, MPI.COMM_WORLD)
+    if !listen(comm_io2, comm_engine2, MPI.COMM_WORLD)
         error("Listen timeout, $TRIALS trials.")
     end
 
@@ -160,8 +158,8 @@ function main()
     # end
 
     # Get pipeline config
-    pipeline_vars = inquirePipelineConfigurationStructure(comm_io)
-    pipeline_config = getPipelineConfigurationStructure(comm_engine, pipeline_vars)
+    pipeline_vars = inquirePipelineConfigurationStructure(comm_io2)
+    pipeline_config = getPipelineConfigurationStructure(comm_engine2, pipeline_vars)
     @show pipeline_config
 
     ready(comm_io, comm_engine, MPI.COMM_WORLD, 2)
