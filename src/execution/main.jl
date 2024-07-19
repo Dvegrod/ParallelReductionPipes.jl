@@ -11,7 +11,6 @@ global logfile = undef
 
 # Requires write mode
 function ready(io :: ADIOS2.AIO, engine :: ADIOS2.Engine, comm :: MPI.Comm, ready_val :: Int)
-
     if MPI.Comm_rank(comm) == 2
         var = metadata[:exec_ready]
         if ready_val == 1
@@ -138,7 +137,7 @@ function main()
     adios = adios_init_mpi(MPI.COMM_WORLD)
     comm_io = declare_io(adios, "OUTCOMMIO_WRITE")
 
-    comm_engine = open(comm_io, "reducer.bp", mode_write)
+    comm_engine = open(comm_io, "reducer-r.bp", mode_write)
 
     ready(comm_io, comm_engine, MPI.COMM_WORLD, 1)
 
@@ -146,7 +145,7 @@ function main()
 
     comm_io2 = declare_io(adios, "OUTCOMMIO_READ")
 
-    comm_engine = open(comm_io2, "reducer.bp", mode_readRandomAccess)
+    comm_engine = open(comm_io2, "reducer-l.bp", mode_readRandomAccess)
 
     # LISTEN FOR CONFIGURATION ARRIVAL
     if !listen(comm_io, comm_engine, MPI.COMM_WORLD)

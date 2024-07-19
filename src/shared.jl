@@ -4,7 +4,7 @@ macro check_for_val_w_timeout(func :: Expr, val :: Any, time_sec :: Int)
     f = eval(func)
 
     return quote
-	      for i in 1:time_sec
+	      for i in 1:$time_sec
             r = f()
             if r !== nothing && r == $val
                 return true

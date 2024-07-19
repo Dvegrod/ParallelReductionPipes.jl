@@ -54,7 +54,7 @@ function build(builder::PipelineBuilder)
 
     adios = adios_init_serial()
     io = declare_io(adios, "COMM_IO")
-    engine = open(io, "reducer.bp", mode_write)
+    engine = open(io, "reducer-l.bp", mode_write)
 
     defineMetadata(io)
 
