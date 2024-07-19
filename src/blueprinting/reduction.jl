@@ -38,13 +38,18 @@ end
        - Size mismatch
        - Type mismatch
 """
-function reduction(pipeline :: PipelineBuilder, kernel :: Kernel, operator :: Union{Symbol,String,Int})
+function reduction(pipeline :: PipelineBuilder, kernel :: Union{Tuple{Int}, Kernel}, operator :: Union{Symbol,String,Int})
     # Get input size
     if isempty(pipeline.layers)
         output_shape = pipeline.input.var_shape
     else
         output_shape = pipeline.layers[end].output_shape
     end
+
+    if kernel isa Tuple
+        kernel = Kernel(kernel, false)
+    end
+
     # Calculate output size
     output_size, rems = sizeTransform(output_shape, kernel)
 

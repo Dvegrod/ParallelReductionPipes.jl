@@ -1,5 +1,4 @@
 
-using MPI: @assert_minlength
 """
   Validates a pipeline configuration. True is returned if valid.
 """
@@ -47,6 +46,26 @@ function exportPipelineConfiguration(adios_engine :: ADIOS2.Engine,
     err = perform_puts!(adios_engine)
     @assert err === error_none
 
+    put!(adios_engine, metadata[:ready], 1)
+
+    err = perform_puts!(adios_engine)
+    @assert err === error_none
+
     return
 end
 
+
+function build(builder :: PipelineBuilder)
+
+    adios = adios_init_serial()
+    io = declare_io(adios ,"COMM_IO")
+    engine = open(io, "reducer.bp", mode_write)
+
+    definePipelineConfigurationStructure(io)
+
+    vars = inquirePipelineConfigurationStructure(io)
+
+    exportPipelineConfiguration(engine, vars, builder)
+
+    close(engine)
+end

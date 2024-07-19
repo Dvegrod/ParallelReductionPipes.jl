@@ -1,5 +1,5 @@
 module reducer
-export PipelineBuilder, reduction, input, kernel
+export PipelineBuilder, reduction, input, kernel, build
 
 using MPI
 using ADIOS2

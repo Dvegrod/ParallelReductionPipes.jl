@@ -28,7 +28,7 @@ function listen(io::ADIOS2.AIO, engine::ADIOS2.Engine, comm::MPI.Comm)::Bool
         for _ in 1:TRIALS
             config_ready = _get(io, engine, :ready)
 
-            if config_ready != nothing
+            if config_ready !== nothing && config_ready > 0
                 bool = true
                 break
             end
@@ -154,13 +154,13 @@ function main()
     #     logfile = open("./reducer-logs.log", mode_write)
     # end
 
-    # # Get pipeline config
-    # pipeline_vars = inquirePipelineConfigurationStructure(comm_io)
-    # pipeline_config = getPipelineConfigurationStructure(comm_engine, pipeline_vars)
-    # @show pipeline_config
+    # Get pipeline config
+    pipeline_vars = inquirePipelineConfigurationStructure(comm_io)
+    pipeline_config = getPipelineConfigurationStructure(comm_engine, pipeline_vars)
+    @show pipeline_config
 
     # # ADIOS INIT INPUT STREAM
-    # input_io = declare_io(adios, "INPUT_IO")
+    #input_io = declare_io(adios, "INPUT_IO")
 
     # input_engine = open(input_io, pipeline_config[:engine], mode_readRandomAccess)
 

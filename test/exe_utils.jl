@@ -21,7 +21,7 @@
             dims = (5,)
             shape = (100,)
 
-            coords = reducer.localChunkSelection(shape, rank, dims)
+            coords = reducer.localChunkSelection(shape, shape, rank, dims)
 
             @test coords[1] == (0,)
             @test coords[2] == (20,)
@@ -32,7 +32,7 @@
             dims = (3,)
             shape = (100,)
 
-            coords = reducer.localChunkSelection(shape, rank, dims)
+            coords = reducer.localChunkSelection(shape, shape, rank, dims)
 
             @test coords[1] == (66,)
             @test coords[2] == (34,)
@@ -43,7 +43,7 @@
             dims = (5, 5)
             shape = (100, 100)
 
-            coords = reducer.localChunkSelection(shape, rank, dims)
+            coords = reducer.localChunkSelection(shape, shape, rank, dims)
 
             @test coords[1] == (0, 0)
             @test coords[2] == (20, 20)
@@ -54,7 +54,7 @@
             dims = (5, 5, 2)
             shape = (100, 100, 100)
 
-            coords = reducer.localChunkSelection(shape, rank, dims)
+            coords = reducer.localChunkSelection(shape, shape, rank, dims)
 
             @test coords[1] == (0, 0, 0)
             @test coords[2] == (20, 20, 50)
