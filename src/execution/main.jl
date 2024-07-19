@@ -31,6 +31,8 @@ function listen(io::ADIOS2.AIO, engine::ADIOS2.Engine, comm::MPI.Comm)::Bool
         for _ in 1:TRIALS
             config_ready = _get(io, engine, :ready)
 
+            @show config_ready
+
             if config_ready !== nothing && config_ready > 0
                 bool = true
                 break
@@ -148,7 +150,7 @@ function main()
     comm_engine = open(comm_io2, "reducer-l.bp", mode_readRandomAccess)
 
     # LISTEN FOR CONFIGURATION ARRIVAL
-    if !listen(comm_io, comm_engine, MPI.COMM_WORLD)
+    if !listen(comm_io2, comm_engine, MPI.COMM_WORLD)
         error("Listen timeout, $TRIALS trials.")
     end
 
