@@ -145,6 +145,9 @@ function main()
 
     comm_io2 = declare_io(adios, "OUTCOMMIO_READ")
 
+    # WAIT FOR reducer-l.bp existence
+    # TODO
+
     comm_engine2 = open(comm_io2, "reducer-l.bp", mode_readRandomAccess)
 
     # LISTEN FOR CONFIGURATION ARRIVAL
