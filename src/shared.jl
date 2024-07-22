@@ -55,7 +55,6 @@ function inquirePipelineConfigurationStructure(adios_io::ADIOS2.AIO)::Dict{Symbo
     try
         for (key, var) in var_repository
             y = inquire_variable(adios_io, var.name)
-            @show var.name, y
             result[key] = y
         end
     catch e

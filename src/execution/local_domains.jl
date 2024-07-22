@@ -20,7 +20,9 @@ function localChunkSelection(sh :: Tuple, ker:: Tuple, rank :: Int, dims :: Unio
 
     pcoords = dim_coord(rank, dims)
 
-    dcoords = slicer1D.(pcoords, sh, ker, dims)
+    dcoords = Tuple(slicer1D.(pcoords, sh, ker, dims))
+
+    @show dcoords
 
     tdcoords = transpose(dcoords)
 
@@ -32,7 +34,7 @@ end
   side_size : global size
   nchunks : number of chunks in which this dimension is segmented
 """
-function slicer1D(pos::Int, side_size::Int, ker :: Int, nchunks::Int)::Tuple{Int,Int,Int}
+function slicer1D(pos::Int, side_size::Int, ker :: Int, nchunks)::Tuple{Int,Int,Int}
 
     @assert 0 <= pos < nchunks
 

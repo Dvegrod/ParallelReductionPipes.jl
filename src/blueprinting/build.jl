@@ -7,6 +7,17 @@ function validatePipelineConfiguration(builder :: PipelineBuilder) :: Bool
     return true
 end
 
+function serializeShape(shape :: Vector{Int}, buffer_view)
+
+    i = 0
+    for e in shape
+        i += 1
+        buffer_view[i] = e
+    end
+
+    return buffer_view
+end
+
 """
   Sets the configuration into the communication channel with the reducer process for it to receive it
 """
@@ -19,7 +30,9 @@ function exportPipelineConfiguration(adios_engine :: ADIOS2.Engine,
     put!(adios_engine, var_dict[:var_name], builder.input.var_name)
     put!(adios_engine, var_dict[:uses_config], Int(builder.input.config_file != ""))
     put!(adios_engine, var_dict[:config], builder.input.config_file)
-    put!(adios_engine, var_dict[:var_shape], builder.input.var_shape)
+
+    var_shape = serializeShape(builder.input.var_shape, zeros(Int, 3))
+    put!(adios_engine, var_dict[:var_shape], var_shape)
     # TODO TYPE SHAPE
     put!(adios_engine, var_dict[:var_type], 0)
 
@@ -30,12 +43,9 @@ function exportPipelineConfiguration(adios_engine :: ADIOS2.Engine,
     for layer :: Layer in builder.layers
         n_layers += 1
         layers[n_layers, 1] = layer.operator.id
-        layers[n_layers, 2] = layer.kernel.dims[1]
-        layers[n_layers, 3] = layer.kernel.dims[2]
-        layers[n_layers, 4] = layer.kernel.dims[3]
-        layers[n_layers, 5] = layer.output_shape[1]
-        layers[n_layers, 6] = layer.output_shape[2]
-        layers[n_layers, 7] = layer.output_shape[3]
+
+        serializeShape(layer.kernel.dims, view(layers, n_layers, 2:4))
+        serializeShape(layer.output_shape, view(layers, n_layers, 5:7))
     end
 
     put!(adios_engine, var_dict[:n_layers], n_layers)

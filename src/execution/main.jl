@@ -47,7 +47,8 @@ function listen(io::ADIOS2.AIO, engine::ADIOS2.Engine, comm::MPI.Comm)::Bool
 end
 
 
-function get_input(io :: ADIOS2.AIO, engine::ADIOS2.Engine, var_name :: String,
+function get_input(io :: ADIOS2.AIO, engine::ADIOS2.Engine,
+                   var_name :: String, var_shape :: Tuple,
                    rank :: Int, dims :: Union{Tuple, Vector}) :: LocalDomain
 
     y = inquire_variable(io, var_name)
@@ -58,32 +59,50 @@ function get_input(io :: ADIOS2.AIO, engine::ADIOS2.Engine, var_name :: String,
     end
 
     # Perform slicing
-    start, size, _ = localChunkSelection(shape(y), rank, dims)
+    start, size, _ = localChunkSelection(var_shape, (0,0,), rank, dims)
+
+    @show start,size
 
     set_selection(y, start, size)
 
     array = Array{type(y)}(undef, size...)
 
-    _get(engine, y, array)
+    get(engine, y, array)
 
     perform_gets(engine)
 
-    return LocalDomain(start, size, array)
+    @show sum(array)
+
+    return LocalDomain(array, start, size)
+end
+
+function reduce_dim(in :: Tuple) :: Tuple
+
+    t = Int[]
+    for i in in
+        if i > 0
+            push!(t, i)
+        else
+            # push!(t, 1)
+        end
+    end
+
+    return Tuple(t)
 end
 
 function execute_layer(input :: LocalDomain, config ::Array) :: LocalDomain
 
     # Config are 7 numbers, x1 operator x3 kernel shape x3 output shape in that order
 
-    in_shape = shape(input)
-    ker_shape = Tuple(config[2:4])
-    out_shape = Tuple(config[5:7])
+    in_shape = input.size
+    ker_shape = reduce_dim(Tuple(config[2:4]))
+    out_shape = reduce_dim(Tuple(config[5:7]))
 
     # TODO Save on allocation time
-    output = transform(input, ker_shape, Array(undef, out_shape...))
+    output = transform(input, ker_shape, Array{Float64}(undef, out_shape...))
 
-    @parallel (1:out_shape[1], 1:out_shape[2], 1:out_shape[3]) reduction_functions[config[1]](input.data, output.data,
-        in_shape, ker_shape)
+    @parallel (1:out_shape[1], 1:out_shape[2], 1:1) reduction_functions[config[1]](input.data, output.data)
+    #in_shape, ker_shape)
     return output
 end
 
@@ -100,7 +119,9 @@ function define_output(io::ADIOS2.AIO, out_shape::Tuple{Int}) :: ADIOS2.Variable
     return y
 end
 
-function submit_output(io::ADIOS2.AIO, engine::ADIOS2.Engine, input::LocalDomain)
+function submit_output(io::ADIOS2.AIO, engine::ADIOS2.Engine, input::LocalDomain, global_shape)
+
+    define_variable(io, "out", Float64, global_shape, input.start, input.size)
 
     y = inquire_variable(io, "out")
 
@@ -109,8 +130,7 @@ function submit_output(io::ADIOS2.AIO, engine::ADIOS2.Engine, input::LocalDomain
         throw(e)
     end
 
-    # Set local selection
-    set_selection(y, input.start, input.size)
+    @show input.start, input.size, global_shape
 
     put!(engine, y, input.data)
     perform_puts!(engine)
@@ -126,6 +146,7 @@ function main()
     rank = MPI.Comm_rank(MPI.COMM_WORLD)
     size = MPI.Comm_size(MPI.COMM_WORLD)
 
+    dims = MPI.Dims_create(size, [0,0])
 
     # Flag parse
     for i in ARGS
@@ -163,32 +184,37 @@ function main()
     # Get pipeline config
     pipeline_vars = inquirePipelineConfigurationStructure(comm_io2)
     pipeline_config = getPipelineConfigurationStructure(comm_engine2, pipeline_vars)
-    @show pipeline_config
 
     ready(comm_io, comm_engine, MPI.COMM_WORLD, 2)
 
-    # # ADIOS INIT INPUT STREAM
-    #input_io = declare_io(adios, "INPUT_IO")
+    # ADIOS INIT INPUT STREAM
+    input_io = declare_io(adios, "INPUT_IO")
 
-    # input_engine = open(input_io, pipeline_config[:engine], mode_readRandomAccess)
+    input_engine = open(input_io, pipeline_config[:engine], mode_readRandomAccess)
 
-    # # ADIOS INIT OUTPUT STREAM
-    # output_io = declare_io(adios, "OUTPUT_IO")
+    # ADIOS INIT OUTPUT STREAM
+    output_io = declare_io(adios, "OUTPUT_IO")
 
-    # output_engine = open(output_io, pipeline_config[:engine], mode_readRandomAccess)
+    output_engine = open(output_io, "reducer-o.bp", mode_write)
 
-    # # Execute pipeline
+    # Execute pipeline
 
-    # # INPUT CHUNK
-    # output = get_input(input_io, input_engine, pipeline_config[:var_name])
-    # # PROCESS CHUNK
-    # for i in 1:pipeline_vars[:n_layers]
-    #     output = execute_layer(output, pipeline_config[:layer_info][i])
-    # end
-    # # OUTPUT CHUNK
-    # submit_output(output_io, output_engine, output)
+    # INPUT CHUNK
+    output = get_input(input_io, input_engine,
+                       pipeline_config[:var_name], reduce_dim(Tuple(pipeline_config[:var_shape])),
+                       rank, dims)
+    # PROCESS CHUNK
+    @show pipeline_config[:layer_config][1, :]
+    for i in 1:pipeline_config[:n_layers]
+        output = execute_layer(output, pipeline_config[:layer_config][i,:])
+    end
+    # OUTPUT CHUNK
+    submit_output(output_io, output_engine, output, reduce_dim(Tuple(pipeline_config[:layer_config][pipeline_config[:n_layers], 5:7])))
 
     close(comm_engine)
+    close(comm_engine2)
+    close(input_engine)
+    close(output_engine)
     MPI.Finalize()
 
 end
