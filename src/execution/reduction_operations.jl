@@ -4,10 +4,11 @@
     factor = div.(size(Big), size(Small))
     remdr = rem.(size(Big), size(Small))
     if sum(remdr) == 0
-        lowx = 1 + (ix - 1) * 2
-        lowy = 1 + (iy - 1) * 2
-        highx = factor[1] + (ix - 1) * 2
-        highy = factor[2] + (iy - 1) * 2
+        # Index over a kernel region caution: Julia indexing makes it confusing (+1 and -1 added for that)
+        lowx = 1 + (ix - 1) * factor[1]
+        lowy = 1 + (iy - 1) * factor[2]
+        highx = factor[1] + lowx - 1
+        highy = factor[2] + lowy - 1
 
         Small[ix, iy] = reduce(+, Big[lowx:highx, lowy:highy]) ./ prod(factor)
     else

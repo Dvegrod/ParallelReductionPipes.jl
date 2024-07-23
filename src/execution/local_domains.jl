@@ -7,6 +7,7 @@ end
 
 function transform(big_domain :: LocalDomain, kernel :: Tuple, buffer :: Array) :: LocalDomain
 
+    # TODO Inexact
     new_start = div.(big_domain.start, kernel)
     new_size = div.(big_domain.size, kernel)
 

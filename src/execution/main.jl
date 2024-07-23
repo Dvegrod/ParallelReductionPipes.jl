@@ -1,5 +1,5 @@
 
-
+using Plots
 
 TRIALS = 2000
 
@@ -99,9 +99,12 @@ function execute_layer(input :: LocalDomain, config ::Array) :: LocalDomain
     out_shape = reduce_dim(Tuple(config[5:7]))
 
     # TODO Save on allocation time
-    output = transform(input, ker_shape, Array{Float64}(undef, out_shape...))
+    output = transform(input, ker_shape, Array{Float64}(undef, [50,50]...))
 
-    @parallel (1:out_shape[1], 1:out_shape[2], 1:1) reduction_functions[config[1]](input.data, output.data)
+    @show output.size
+
+    # TODO
+    @parallel (1:output.size[1], 1:output.size[2], 1:1) reduction_functions[config[1]](input.data, output.data)
     #in_shape, ker_shape)
     return output
 end
@@ -199,15 +202,24 @@ function main()
 
     # Execute pipeline
 
+    # STEP LOOP
+
     # INPUT CHUNK
     output = get_input(input_io, input_engine,
                        pipeline_config[:var_name], reduce_dim(Tuple(pipeline_config[:var_shape])),
                        rank, dims)
+
+    spy(output.data)
+    savefig("in-$rank.png")
     # PROCESS CHUNK
     @show pipeline_config[:layer_config][1, :]
     for i in 1:pipeline_config[:n_layers]
         output = execute_layer(output, pipeline_config[:layer_config][i,:])
+        @show output.start, output.size
     end
+
+    spy(output.data)
+    savefig("out-$rank.png")
     # OUTPUT CHUNK
     submit_output(output_io, output_engine, output, reduce_dim(Tuple(pipeline_config[:layer_config][pipeline_config[:n_layers], 5:7])))
 
