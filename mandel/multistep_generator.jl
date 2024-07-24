@@ -1,6 +1,5 @@
 using ParallelStencil: @parallel_indices_cuda, init_parallel_stencil
 using ADIOS2
-using Plots
 using ParallelStencil
 
 USE_GPU=false
@@ -81,12 +80,14 @@ function main()
     # Buffer setup
     buffer = Float64[0. for _ in 1:side_dim, _ in 1:side_dim]
 
-
+    @warn "Reached preadios"
     # Setup ADIOS
-    adios = adios_init_serial()
+    adios = adios_init_serial("mandel/adios-config.xml")
     io = declare_io(adios, "IO")
-    engine = open(io, "buffer.bp", mode_write)
+    engine = open(io, "$(ENV["SCRATCH"])/sst-file", mode_write)
 
+
+    @warn "Reached adios"
     # Declare var
     matrix = define_variable(io, "mandel", buffer)
 
@@ -95,7 +96,8 @@ function main()
 
     # Step loop
 
-    for i in 10:14
+    for i in 1:50
+        @warn "Beggining step $i"
         # Setup transform zooming in every iteration
         transform = grid_transform_setup(side_dim, center[1]  - bz(i), center[1] + bz(i),
                                          center[2]  - bz(i), center[2] + bz(i))

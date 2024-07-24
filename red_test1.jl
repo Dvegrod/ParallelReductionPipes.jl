@@ -3,7 +3,7 @@ using ADIOS2
 
 include("src/reducer.jl")
 
-builder::reducer.PipelineBuilder = reducer.input("mandel", "buffer.bp", "", [1000, 1000], Float64)
+builder::reducer.PipelineBuilder = reducer.input("mandel", "$(ENV["SCRATCH"])/buffer.bp", "", [1000, 1000], Float64)
 
 
 # Add one layer

@@ -118,7 +118,6 @@ function define_output(io::ADIOS2.AIO, out_shape::Tuple{Int}) :: ADIOS2.Variable
     cn = out_shape
 
     y = define_variable(io, "out", Float64, sh, st, cn)
-
     return y
 end
 
@@ -160,7 +159,7 @@ function main()
     end
 
     # ADIOS INIT COMMUNICATION STREAM
-    adios = adios_init_mpi(MPI.COMM_WORLD)
+    adios = adios_init_mpi("adios_config.xml", MPI.COMM_WORLD)
     comm_io = declare_io(adios, "OUTCOMMIO_WRITE")
 
     comm_engine = open(comm_io, "reducer-r.bp", mode_write)
@@ -193,7 +192,7 @@ function main()
     # ADIOS INIT INPUT STREAM
     input_io = declare_io(adios, "INPUT_IO")
 
-    input_engine = open(input_io, pipeline_config[:engine], mode_readRandomAccess)
+    input_engine = open(input_io, "/scratch/snx3000/dvegarod/sst-file.sst",mode_read)#pipeline_config[:engine], mode_read)
 
     # ADIOS INIT OUTPUT STREAM
     output_io = declare_io(adios, "OUTPUT_IO")
@@ -201,27 +200,29 @@ function main()
     output_engine = open(output_io, "reducer-o.bp", mode_write)
 
     # Execute pipeline
+    @warn "Reached pipeline beginning $input_engine"
 
     # STEP LOOP
+    while begin_step(input_engine) == step_status_ok
 
-    # INPUT CHUNK
-    output = get_input(input_io, input_engine,
-                       pipeline_config[:var_name], reduce_dim(Tuple(pipeline_config[:var_shape])),
-                       rank, dims)
+        @warn "STEP"
+        # INPUT CHUNK
+        output = get_input(input_io, input_engine,
+                           pipeline_config[:var_name], reduce_dim(Tuple(pipeline_config[:var_shape])),
+                           rank, dims)
 
-    spy(output.data)
-    savefig("in-$rank.png")
-    # PROCESS CHUNK
-    @show pipeline_config[:layer_config][1, :]
-    for i in 1:pipeline_config[:n_layers]
-        output = execute_layer(output, pipeline_config[:layer_config][i,:])
-        @show output.start, output.size
+        # PROCESS CHUNK
+        @show pipeline_config[:layer_config][1, :]
+        for i in 1:pipeline_config[:n_layers]
+            output = execute_layer(output, pipeline_config[:layer_config][i,:])
+            @show output.start, output.size
+        end
+
+        # OUTPUT CHUNK
+        submit_output(output_io, output_engine, output, reduce_dim(Tuple(pipeline_config[:layer_config][pipeline_config[:n_layers], 5:7])))
+
+        end_step(input_engine)
     end
-
-    spy(output.data)
-    savefig("out-$rank.png")
-    # OUTPUT CHUNK
-    submit_output(output_io, output_engine, output, reduce_dim(Tuple(pipeline_config[:layer_config][pipeline_config[:n_layers], 5:7])))
 
     close(comm_engine)
     close(comm_engine2)

@@ -1,6 +1,7 @@
 <?xml version="1.0"?>
 <adios-config>
-    <io name="INPUT_IO">
+
+    <io name="IO">
         <engine type="SST">
             <!-- SST engine parameters -->
 
@@ -12,4 +13,5 @@
             <parameter key="OpenTimeoutSecs" value="10.0"/>
         </engine>
     </io>
+
 </adios-config>
