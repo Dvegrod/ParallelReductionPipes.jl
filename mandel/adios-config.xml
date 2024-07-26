@@ -10,7 +10,7 @@
             <parameter key="QueueFullPolicy" value="Block"/>
 
             <!-- BP4/SST engine parameters -->
-            <parameter key="OpenTimeoutSecs" value="10.0"/>
+            <parameter key="OpenTimeoutSecs" value="100.0"/>
         </engine>
     </io>
 

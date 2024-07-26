@@ -97,7 +97,7 @@ function main()
     # Step loop
 
     for i in 1:50
-        @warn "Beggining step $i"
+        @warn "Beginning step $i"
         # Setup transform zooming in every iteration
         transform = grid_transform_setup(side_dim, center[1]  - bz(i), center[1] + bz(i),
                                          center[2]  - bz(i), center[2] + bz(i))
@@ -108,9 +108,9 @@ function main()
         # Save computation
         begin_step(engine)
         put!(engine, matrix, buffer)
+        perform_puts!(engine)
         end_step(engine)
 
-        perform_puts!(engine)
     end
 
     close(engine)

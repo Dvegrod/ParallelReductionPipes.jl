@@ -9,7 +9,10 @@ io = declare_io(adios, "IO")
 
 engine = open(io, "reducer-o.bp", mode_readRandomAccess)
 
+
 y = inquire_variable(io, "out")
+
+set_step_selection(y, 10, 1)
 
 buf = Array{Float64}(undef, 100,100)
 

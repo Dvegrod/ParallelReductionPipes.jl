@@ -192,7 +192,7 @@ function main()
     # ADIOS INIT INPUT STREAM
     input_io = declare_io(adios, "INPUT_IO")
 
-    input_engine = open(input_io, "/scratch/snx3000/dvegarod/sst-file.sst",mode_read)#pipeline_config[:engine], mode_read)
+    input_engine = open(input_io, "/scratch/snx3000/dvegarod/sst-file",mode_read)#pipeline_config[:engine], mode_read)
 
     # ADIOS INIT OUTPUT STREAM
     output_io = declare_io(adios, "OUTPUT_IO")
@@ -205,6 +205,7 @@ function main()
     # STEP LOOP
     while begin_step(input_engine) == step_status_ok
 
+        begin_step(output_engine)
         @warn "STEP"
         # INPUT CHUNK
         output = get_input(input_io, input_engine,
@@ -222,6 +223,7 @@ function main()
         submit_output(output_io, output_engine, output, reduce_dim(Tuple(pipeline_config[:layer_config][pipeline_config[:n_layers], 5:7])))
 
         end_step(input_engine)
+        end_step(output_engine)
     end
 
     close(comm_engine)
