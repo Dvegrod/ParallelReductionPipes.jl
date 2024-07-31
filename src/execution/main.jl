@@ -1,55 +1,45 @@
 
-using Plots
+struct ExecutionInstance
+    # Execution instance id
+    id            ::Int
 
-TRIALS = 2000
+    # MPI
+    rank          ::Int
+    size          ::Int
+    dims          ::Tuple
+
+    # IN and OUT
+    input_IO      ::ADIOS2.AIO
+    output_IO     ::ADIOS2.AIO
+    input_engine  ::ADIOS2.Engine
+    output_engine ::ADIOS2.Engine
+
+    # Parameters to setup reduction pipeline
+    # Keys defined at: ../structs.jl
+    pipeline_config :: Dict{Symbol, Any}
+
+    # Local version of the layers with chunk based sizes
+    localized_layers :: LocalLayer[]
+
+    global_output_shape :: Tuple
+end
+
+input_shape(e::ExecutionInstance) = e.localized_layers[1].input_shape
+input_start(e::ExecutionInstance) = e.localized_layers[1].input_start
+
+output_shape(e::ExecutionInstance) = e.localized_layers[end].output_shape
+output_start(e::ExecutionInstance) = e.localized_layers[end].output_start
+
 
 flags = Dict{String,Bool}([
-    "--log" => true
+   "--log" => true
 ])
 
 global logfile = undef
 
-# Requires write mode
-function ready(io :: ADIOS2.AIO, engine :: ADIOS2.Engine, comm :: MPI.Comm, ready_val :: Int)
-    if MPI.Comm_rank(comm) == 2
-        var = metadata[:exec_ready]
-        if ready_val == 1
-            declare_and_set(io, engine, var, 1)
-        else
-            _set(io, engine, :exec_ready, ready_val)
-        end
-        @warn "READY $ready_val"
-    end
-    MPI.Barrier(comm)
-end
-
-# Requires read mode
-function listen(io::ADIOS2.AIO, engine::ADIOS2.Engine, comm::MPI.Comm)::Bool
-    bool = false
-
-    if MPI.Comm_rank(comm) == 0
-        for _ in 1:TRIALS
-            config_ready = _get(io, engine, :ready)
-
-            @show config_ready
-
-            if config_ready !== nothing && config_ready > 0
-                bool = true
-                break
-            end
-
-            @warn "LISTENING"
-            sleep(1)
-        end
-    end
-    bool = MPI.Bcast(bool, 0, comm)
-    return bool
-end
-
 
 function get_input(io :: ADIOS2.AIO, engine::ADIOS2.Engine,
-                   var_name :: String, var_shape :: Tuple,
-                   rank :: Int, dims :: Union{Tuple, Vector}) :: LocalDomain
+                   var_name :: String, start :: Tuple, size :: Tuple) :: LocalDomain
 
     y = inquire_variable(io, var_name)
 
@@ -57,9 +47,6 @@ function get_input(io :: ADIOS2.AIO, engine::ADIOS2.Engine,
         e = ArgumentError("Invalid value, it is not available on the specified IO")
         throw(e)
     end
-
-    # Perform slicing
-    start, size, _ = localChunkSelection(var_shape, (0,0,), rank, dims)
 
     @show start,size
 
@@ -80,7 +67,7 @@ function reduce_dim(in :: Tuple) :: Tuple
 
     t = Int[]
     for i in in
-        if i > 0
+        if i > 1
             push!(t, i)
         else
             # push!(t, 1)
@@ -90,42 +77,27 @@ function reduce_dim(in :: Tuple) :: Tuple
     return Tuple(t)
 end
 
-function execute_layer(input :: LocalDomain, config ::Array) :: LocalDomain
-
-    # Config are 7 numbers, x1 operator x3 kernel shape x3 output shape in that order
-
-    in_shape = input.size
-    ker_shape = reduce_dim(Tuple(config[2:4]))
-    out_shape = reduce_dim(Tuple(config[5:7]))
+function execute_layer(input :: LocalDomain, config :: LocalLayer) :: LocalDomain
 
     # TODO Save on allocation time
-    output = transform(input, ker_shape, Array{Float64}(undef, [50,50]...))
+    output = transform(input, config.kernel_shape, Array{Float64}(undef, config.output_shape...))
 
     @show output.size
 
     # TODO
-    @parallel (1:output.size[1], 1:output.size[2], 1:1) reduction_functions[config[1]](input.data, output.data)
+    @parallel (1:output.size[1], 1:output.size[2], 1:output.size[3]) reduction_functions[config.operator_id](input.data, output.data)
     #in_shape, ker_shape)
     return output
 end
 
-function define_output(io::ADIOS2.AIO, out_shape::Tuple{Int}) :: ADIOS2.Variable
-
-
-    # TODO
-    sh = out_shape
-    st = Tuple([0 for i in out_shape])
-    cn = out_shape
-
-    y = define_variable(io, "out", Float64, sh, st, cn)
-    return y
-end
 
 function submit_output(io::ADIOS2.AIO, engine::ADIOS2.Engine, input::LocalDomain, global_shape)
 
     define_variable(io, "out", Float64, global_shape, input.start, input.size)
 
     y = inquire_variable(io, "out")
+
+    # TODO COLLAPSE
 
     if isnothing(y)
         e = ArgumentError("Out var has not been defined yet")
@@ -138,17 +110,55 @@ function submit_output(io::ADIOS2.AIO, engine::ADIOS2.Engine, input::LocalDomain
     perform_puts!(engine)
 end
 
+
+function reduction_execution(e :: ExecutionInstance)
+    # STEP LOOP
+    while begin_step(e.input_engine) == step_status_ok
+
+        begin_step(e.output_engine)
+        @warn "STEP"
+        # INPUT CHUNK
+        output = get_input(e.input_IO, e.input_engine,
+                           e.pipeline_config[:var_name],
+                           input_shape(e), input_start(e))
+
+        # PROCESS CHUNK
+        for i in 1:e.pipeline_config[:n_layers]
+            output = execute_layer(output, e.localized_layers[i])
+        end
+
+        # OUTPUT CHUNK TODO SIMPLIFY
+        submit_output(e.output_IO, e.output_engine, output, e.global_output_shape)
+
+        end_step(e.input_engine)
+        end_step(e.output_engine)
+    end
+end
+
+function cleanup_instance(e :: ExecutionInstance)
+    close(e.input_engine)
+    close(e.output_engine)
+    GC.gc()
+end
+
+
+# THERE ARE 4 ADIOS STREAMS GOING ON
+#   A. CONTROL PLANE (BP5) (called comm in variable names)
+#      1. Runtime writes (i.e. to send status to listeners)
+#      2. Runtime reads (i.e to get config parameters)
+#   B. DATA PLANE (BP5 or SST)
+#      1. Input data
+#      2. Output data
+
 function main()
     # Initialization
-    # Parallel stencil
-
     # MPI
     MPI.Init()
 
     rank = MPI.Comm_rank(MPI.COMM_WORLD)
     size = MPI.Comm_size(MPI.COMM_WORLD)
 
-    dims = MPI.Dims_create(size, [0,0])
+    dims = MPI.Dims_create(size, [0,0,1])
 
     # Flag parse
     for i in ARGS
@@ -160,6 +170,7 @@ function main()
 
     # ADIOS INIT COMMUNICATION STREAM
     adios = adios_init_mpi("adios_config.xml", MPI.COMM_WORLD)
+
     comm_io = declare_io(adios, "OUTCOMMIO_WRITE")
 
     comm_engine = open(comm_io, "reducer-r.bp", mode_write)
@@ -171,65 +182,64 @@ function main()
     # WAIT FOR reducer-l.bp existence
     # TODO
 
-    comm_engine2 = open(comm_io2, "reducer-l.bp", mode_readRandomAccess)
-
-    # LISTEN FOR CONFIGURATION ARRIVAL
-    if !listen(comm_io2, comm_engine2, MPI.COMM_WORLD)
-        error("Listen timeout, $TRIALS trials.")
-    end
-
     # # Logger
     # if flags["--log"]
     #     logfile = open("./reducer-logs.log", mode_write)
     # end
 
-    # Get pipeline config
-    pipeline_vars = inquirePipelineConfigurationStructure(comm_io2)
-    pipeline_config = getPipelineConfigurationStructure(comm_engine2, pipeline_vars)
+    comm_engine2 = open(comm_io2, "reducer-l.bp", mode_readRandomAccess)
 
-    ready(comm_io, comm_engine, MPI.COMM_WORLD, 2)
-
-    # ADIOS INIT INPUT STREAM
-    input_io = declare_io(adios, "INPUT_IO")
-
-    input_engine = open(input_io, "/scratch/snx3000/dvegarod/sst-file",mode_read)#pipeline_config[:engine], mode_read)
-
-    # ADIOS INIT OUTPUT STREAM
-    output_io = declare_io(adios, "OUTPUT_IO")
-
-    output_engine = open(output_io, "reducer-o.bp", mode_write)
-
-    # Execute pipeline
-    @warn "Reached pipeline beginning $input_engine"
-
-    # STEP LOOP
-    while begin_step(input_engine) == step_status_ok
-
-        begin_step(output_engine)
-        @warn "STEP"
-        # INPUT CHUNK
-        output = get_input(input_io, input_engine,
-                           pipeline_config[:var_name], reduce_dim(Tuple(pipeline_config[:var_shape])),
-                           rank, dims)
-
-        # PROCESS CHUNK
-        @show pipeline_config[:layer_config][1, :]
-        for i in 1:pipeline_config[:n_layers]
-            output = execute_layer(output, pipeline_config[:layer_config][i,:])
-            @show output.start, output.size
+    last_id = 0
+    for _ in 1:1
+        # LISTEN FOR CONFIGURATION ARRIVAL
+        if !listen(comm_io2, comm_engine2, MPI.COMM_WORLD, last_id)
+            error("Listen timeout, $TRIALS trials.")
         end
+        last_id = _get(comm_io2, comm_engine2, :ready)
 
-        # OUTPUT CHUNK
-        submit_output(output_io, output_engine, output, reduce_dim(Tuple(pipeline_config[:layer_config][pipeline_config[:n_layers], 5:7])))
+        # Get pipeline config
+        pipeline_vars = inquirePipelineConfigurationStructure(comm_io2)
+        pipeline_config = getPipelineConfigurationStructure(comm_engine2, pipeline_vars)
 
-        end_step(input_engine)
-        end_step(output_engine)
+        ready(comm_io, comm_engine, MPI.COMM_WORLD, 2)
+
+        # ADIOS INIT INPUT STREAM
+        input_io = declare_io(adios, "INPUT_IO")
+
+        input_engine = open(input_io, "/scratch/snx3000/dvegarod/sst-file", mode_read)#pipeline_config[:engine], mode_read)
+
+        # ADIOS INIT OUTPUT STREAM
+        output_io = declare_io(adios, "OUTPUT_IO")
+
+        output_engine = open(output_io, "reducer-o.bp", mode_write)
+
+        @warn "Reached pipeline beginning $input_engine"
+
+        # Calculate local pipeline shapes
+        layers = calculateShape(pipeline_config[:layer_config], Tuple(pipeline_config[:var_shape]), pipeline_config[:n_layers], rank, dims)
+
+        exec_instance = ExecutionInstance(
+            last_id,
+            rank,
+            size,
+            dims,
+            input_io,
+            output_io,
+            input_engine,
+            output_engine,
+            pipeline_config,
+            layers,
+            Tuple(pipeline_config[:layer_config][pipeline_config[:n_layers], 5:7])
+        )
+
+        reduction_execution(exec_instance)
+        cleanup_instance(exec_instance)
+
+        ready(comm_io, comm_engine, MPI.COMM_WORLD, 1)
     end
 
     close(comm_engine)
     close(comm_engine2)
-    close(input_engine)
-    close(output_engine)
     MPI.Finalize()
 
 end

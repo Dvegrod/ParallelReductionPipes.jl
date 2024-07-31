@@ -1,9 +1,12 @@
 module reducer
-export PipelineBuilder, reduction, input, kernel, build
 
-using MPI
+abstract type AbstractBackend end
+struct CPUBackend <: AbstractBackend end
+struct CUDABackend <: AbstractBackend end
+
+backend = CPUBackend
+
 using ADIOS2
-#using ImplicitGlobalGrid
 using ParallelStencil
 
 @init_parallel_stencil(Threads, Float64, 3)
@@ -27,10 +30,13 @@ include("blueprinting/operators.jl")
 include("blueprinting/reduction.jl")
 include("blueprinting/build.jl")
 
+
 # Code related to the actual execution of the pipeline
-include("execution/inflate.jl")
+using MPI
+
 include("execution/local_domains.jl")
 include("execution/reduction_operations.jl")
+include("execution/communication.jl")
 include("execution/main.jl")
 
 if abspath(PROGRAM_FILE) == @__FILE__

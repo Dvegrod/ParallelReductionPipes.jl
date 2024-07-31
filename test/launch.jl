@@ -8,11 +8,11 @@ launchcmd = `$(MPI.mpiexec()) -n 4 julia --project=".." ../src/reducer.jl`
 
 @testset "Reducer runtime launcher" begin
 
-    builder::PipelineBuilder = input("var_name", filename, "", [100, 100, 10], Float64)
+    builder::reducer.PipelineBuilder = reducer.input("var_name", filename, "", [100, 100, 10], Float64)
 
     # Add one layer
     ker1 = reducer.kernel([10, 10, 1])
-    builder = reduction(builder, ker1, :average)
+    builder = reducer.reduction(builder, ker1, :average)
 
     # Launch
     p = run(pipeline(launchcmd, out); wait=false)

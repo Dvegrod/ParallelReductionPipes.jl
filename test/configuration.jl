@@ -1,7 +1,7 @@
 
 @testset "Pipeline configuration tests" begin
 
-    builder::PipelineBuilder = input("var_name", filename, "", [100, 100, 10], Float64)
+    builder::reducer.PipelineBuilder = reducer.input("var_name", filename, "", [100, 100, 10], Float64)
 
     @testset "Builder tests" begin
 
@@ -12,7 +12,7 @@
             @test builder.input.config_file == ""
             @test builder.input.var_shape == [100,100,10]
 
-            @test_throws ErrorException input("a","b", "", [], String)
+            @test_throws ErrorException reducer.input("a","b", "", [], String)
         end
 
         # Check shapes get calculated correctly
@@ -22,11 +22,11 @@
 
             ker1 = reducer.kernel([10, 10, 1])
 
-            builder_a = reduction(builder, ker1, :average)
+            builder_a = reducer.reduction(builder, ker1, :average)
 
             ker2 = reducer.kernel([12, 12, 10])
 
-            builder_b = reduction(builder, ker2, 1)
+            builder_b = reducer.reduction(builder, ker2, 1)
 
             @test builder_a.layers[1].kernel.dims  == [10, 10, 1]
             @test builder_a.layers[1].output_shape == [10, 10, 10]
@@ -39,7 +39,7 @@
 
     # Add one layer
     ker1 = reducer.kernel([10, 10, 1])
-    builder = reduction(builder, ker1, :average)
+    builder = reducer.reduction(builder, ker1, :average)
 
     @testset "Serialization tests" begin
 

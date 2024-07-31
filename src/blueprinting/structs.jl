@@ -29,6 +29,16 @@ struct Layer
     output_shape       :: Vector{Int}
     remainder          :: Vector{Int} # Used when the input is not divisible by the kernel, always same length as input shape
 end
+shape(layer::Layer) = Tuple(layer.output_shape)
+
+struct LocalLayer
+    operator_id ::Int
+    input_start ::Tuple
+    input_shape ::Tuple
+    output_start::Tuple
+    output_shape::Tuple
+    kernel_shape::Tuple
+end
 
 struct PipelineBuilder
     input              :: Input
@@ -46,7 +56,7 @@ metadata = Dict([
     :ready      => Var("config_ready", Int, []),
     :exec_ready => Var("reducer_ready", Int, []),
     :stop       => Var("stop"        , Int, []),
-    :debug      => Var("debug"       , Int, [])
+    :debug      => Var("debug"       , Int, []),
 ])
 
 # Debug:

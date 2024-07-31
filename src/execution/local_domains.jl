@@ -15,13 +15,13 @@ function transform(big_domain :: LocalDomain, kernel :: Tuple, buffer :: Array) 
 end
 
 
-function localChunkSelection(sh :: Tuple, ker:: Tuple, rank :: Int, dims :: Union{Tuple, Vector})
+function localChunkSelection(sh :: Tuple, rank :: Int, dims :: Union{Tuple, Vector})
 
     @assert 0 < length(dims) <= 3
 
     pcoords = dim_coord(rank, dims)
 
-    dcoords = Tuple(slicer1D.(pcoords, sh, ker, dims))
+    dcoords = Tuple(slicer1D.(pcoords, sh, dims))
 
     @show dcoords
 
@@ -30,66 +30,78 @@ function localChunkSelection(sh :: Tuple, ker:: Tuple, rank :: Int, dims :: Unio
     return tdcoords
 end
 
+function calculateShape(layer_config :: Array{Int}, input_shape :: Tuple, n_layers :: Int, rank :: Int, dims ::Tuple) :: Vector{LocalLayer}
+
+    local_layers = LocalLayer[]
+
+    global_output_shape = Tuple(layer_config[end, 5:7])
+
+    # Segment the final output given the processes
+    local_output_start, local_output_shape, _ = localChunkSelection(global_output_shape, rank, dims)
+
+    for i in n_layers:1
+        # Expand using the kernel
+        global_kernel_shape = Tuple(layer_config[i, 2:4])
+
+        # Raw shape == Actual if the layer is divisible bt the kernel
+        raw_input_shape = local_output_shape .* global_kernel_shape
+        local_input_start = local_output_start .* global_kernel_shape
+
+        # Actual shape if first layer then input is the source gross input
+        global_input_shape = i == 1 ? input_shape : Tuple(layer_config[i-1, 5:7])
+
+        # Correct raw if the process takes an irregular chunk
+        local_input_shape = min.(raw_input_shape, global_input_shape .- local_input_start)
+
+        # Save layer
+        pushfirst!(local_layers, LocalLayer(
+            layer_config[i, 1],
+            local_input_start,
+            local_input_shape,
+            local_output_start,
+            local_output_shape,
+            global_kernel_shape
+        ))
+
+        local_output_shape = local_input_shape
+        local_output_start = local_input_start
+    end
+
+    return local_layers
+end
+
+
 """
   pos : location of the process in this dimension
   side_size : global size
   nchunks : number of chunks in which this dimension is segmented
 """
-function slicer1D(pos::Int, side_size::Int, ker :: Int, nchunks)::Tuple{Int,Int,Int}
+function slicer1D(pos::Int, side_size::Int, nchunks)::Tuple{Int,Int,Int}
 
     @assert 0 <= pos < nchunks
 
-    @static slice_mode == :v1 ? begin
-        # V1 : perfect matching
-        chunk_size = div(side_size, nchunks)
-        last_chunk_size = chunk_size + mod(side_size, chunk_size)
 
-        start = pos * chunk_size
+    if side_size == 1
+        return (1, 1, 2)
+    end
 
-        local _end
-        if pos == (nchunks - 1)
-            size = last_chunk_size
-            _end = side_size
-        else
-            size = chunk_size
-            _end = start + chunk_size
-        end
+    # V1 : perfect matching
+    chunk_size = div(side_size, nchunks)
+    last_chunk_size = chunk_size + mod(side_size, chunk_size)
 
-        return (start, size, _end)
-    end : begin end
+    start = pos * chunk_size
 
-    @static slice_mode == :v2 ? begin
-        # V2 : domain might not be divisible by kernel
-        # EXAMPLE:
-        # Size: 9
-        # Ker : 2
-        # Nchunks: 3
-        #
-        # O = element K = kernel number = chunk#
-        #
-        # OO OO OO OO O
-        # K  K  K  K  K
-        # 1  1  2  2  3
+    local _end
+    if pos == (nchunks - 1)
+        size = last_chunk_size
+        _end = side_size
+    else
+        size = chunk_size
+        _end = start + chunk_size
+    end
 
-        out_size = div(side_size, ker, RoundUp)
-        chunk_size = div(out_size, nchunks, RoundUp) * ker
+    return (start, size, _end)
 
-        start = pos * chunk_size
-
-        local _end
-        if pos == (nchunks - 1)
-            last_ker_size = mod1(side_size, ker)
-            last_chunk_size = mod1(out_size, nchunks) * ker - ker + last_ker_size
-
-            size = last_chunk_size
-            _end = side_size
-        else
-            size = chunk_size
-            _end = start + chunk_size
-        end
-
-        return (start, size, _end)
-    end : begin end
 end
 
 

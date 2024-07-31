@@ -3,11 +3,11 @@ using ADIOS2
 
 include("src/reducer.jl")
 
-builder::reducer.PipelineBuilder = reducer.input("mandel", "$(ENV["SCRATCH"])/buffer.bp", "", [1000, 1000], Float64)
+builder::reducer.PipelineBuilder = reducer.input("mandel", "$(ENV["SCRATCH"])/buffer.bp", "", [1000, 1000, 1], Float64)
 
 
 # Add one layer
-ker1 = reducer.kernel([10, 10])
+ker1 = reducer.kernel([10, 10, 1])
 builder = reducer.reduction(builder, ker1, :average)
 
 # Launch

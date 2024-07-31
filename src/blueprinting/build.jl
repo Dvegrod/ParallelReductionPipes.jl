@@ -31,14 +31,14 @@ function exportPipelineConfiguration(adios_engine :: ADIOS2.Engine,
     put!(adios_engine, var_dict[:uses_config], Int(builder.input.config_file != ""))
     put!(adios_engine, var_dict[:config], builder.input.config_file)
 
-    var_shape = serializeShape(builder.input.var_shape, zeros(Int, 3))
+    var_shape = serializeShape(builder.input.var_shape, ones(Int, 3))
     put!(adios_engine, var_dict[:var_shape], var_shape)
     # TODO TYPE SHAPE
     put!(adios_engine, var_dict[:var_type], 0)
 
     # Set layer info (linea, non branching)
     # LAYER ENTRY = 7 Integers (operator id, kerx, kery, kerz, outx, outy, outz)
-    layers = zeros(Int, 32, 7)
+    layers = ones(Int, 32, 7)
     n_layers = 0
     for layer :: Layer in builder.layers
         n_layers += 1
