@@ -21,6 +21,8 @@ function localChunkSelection(sh :: Tuple, rank :: Int, dims :: Union{Tuple, Vect
 
     pcoords = dim_coord(rank, dims)
 
+    @show pcoords
+
     dcoords = Tuple(slicer1D.(pcoords, sh, dims))
 
     @show dcoords
@@ -34,12 +36,13 @@ function calculateShape(layer_config :: Array{Int}, input_shape :: Tuple, n_laye
 
     local_layers = LocalLayer[]
 
-    global_output_shape = Tuple(layer_config[end, 5:7])
+    global_output_shape = Tuple(layer_config[n_layers, 5:7])
+    @show layer_config
 
     # Segment the final output given the processes
     local_output_start, local_output_shape, _ = localChunkSelection(global_output_shape, rank, dims)
 
-    for i in n_layers:1
+    for i in n_layers:-1:1
         # Expand using the kernel
         global_kernel_shape = Tuple(layer_config[i, 2:4])
 
@@ -60,9 +63,11 @@ function calculateShape(layer_config :: Array{Int}, input_shape :: Tuple, n_laye
             local_input_shape,
             local_output_start,
             local_output_shape,
-            global_kernel_shape
+            global_kernel_shape,
+            Array{Float64}(undef, local_output_shape...)
         ))
 
+        @show local_output_start, local_output_shape
         local_output_shape = local_input_shape
         local_output_start = local_input_start
     end
@@ -80,9 +85,8 @@ function slicer1D(pos::Int, side_size::Int, nchunks)::Tuple{Int,Int,Int}
 
     @assert 0 <= pos < nchunks
 
-
     if side_size == 1
-        return (1, 1, 2)
+        return (0, 1, 1)
     end
 
     # V1 : perfect matching

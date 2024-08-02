@@ -29,6 +29,7 @@ include("blueprinting/kernels.jl")
 include("blueprinting/operators.jl")
 include("blueprinting/reduction.jl")
 include("blueprinting/build.jl")
+include("blueprinting/connection.jl")
 
 
 # Code related to the actual execution of the pipeline

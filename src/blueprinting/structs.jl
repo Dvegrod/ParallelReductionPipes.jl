@@ -29,7 +29,7 @@ struct Layer
     output_shape       :: Vector{Int}
     remainder          :: Vector{Int} # Used when the input is not divisible by the kernel, always same length as input shape
 end
-shape(layer::Layer) = Tuple(layer.output_shape)
+_shape(layer::Layer) = Tuple(layer.output_shape)
 
 struct LocalLayer
     operator_id ::Int
@@ -38,6 +38,8 @@ struct LocalLayer
     output_start::Tuple
     output_shape::Tuple
     kernel_shape::Tuple
+
+    out_buffer :: Array
 end
 
 struct PipelineBuilder

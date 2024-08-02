@@ -19,7 +19,7 @@ struct ExecutionInstance
     pipeline_config :: Dict{Symbol, Any}
 
     # Local version of the layers with chunk based sizes
-    localized_layers :: LocalLayer[]
+    localized_layers :: Vector{LocalLayer}
 
     global_output_shape :: Tuple
 end
@@ -37,9 +37,30 @@ flags = Dict{String,Bool}([
 
 global logfile = undef
 
+# Used to trim start or size tuples in case the space does not use all dimensions
+# (sometimes it is not needed to do this but the adios API does need it often for proper transfer)
+function collapseDims(shape :: Tuple)
+    tmp = Int[]
+    for i in shape
+        if i > 1
+            push!(tmp, i)
+        end
+    end
+    return Tuple(tmp)
+end
+
+function collapseDims(start :: Tuple, shape :: Tuple)
+    tmp = Int[]
+    for i in 1:3
+        if shape[i] > 1
+            push!(tmp, start[i])
+        end
+    end
+    return Tuple(tmp)
+end
 
 function get_input(io :: ADIOS2.AIO, engine::ADIOS2.Engine,
-                   var_name :: String, start :: Tuple, size :: Tuple) :: LocalDomain
+                   var_name :: String, start :: Tuple, size :: Tuple) :: Array
 
     y = inquire_variable(io, var_name)
 
@@ -49,10 +70,9 @@ function get_input(io :: ADIOS2.AIO, engine::ADIOS2.Engine,
     end
 
     @show start,size
+    set_selection(y, collapseDims(start, size), collapseDims(size))
 
-    set_selection(y, start, size)
-
-    array = Array{type(y)}(undef, size...)
+    array = Array{type(y)}(undef, collapseDims(size)...)
 
     get(engine, y, array)
 
@@ -60,7 +80,8 @@ function get_input(io :: ADIOS2.AIO, engine::ADIOS2.Engine,
 
     @show sum(array)
 
-    return LocalDomain(array, start, size)
+    # Reshape will expand dims if needed
+    return reshape(array, size)
 end
 
 function reduce_dim(in :: Tuple) :: Tuple
@@ -77,36 +98,49 @@ function reduce_dim(in :: Tuple) :: Tuple
     return Tuple(t)
 end
 
-function execute_layer(input :: LocalDomain, config :: LocalLayer) :: LocalDomain
+function execute_layer!(input :: Array, layer :: LocalLayer)
 
-    # TODO Save on allocation time
-    output = transform(input, config.kernel_shape, Array{Float64}(undef, config.output_shape...))
-
-    @show output.size
-
-    # TODO
-    @parallel (1:output.size[1], 1:output.size[2], 1:output.size[3]) reduction_functions[config.operator_id](input.data, output.data)
-    #in_shape, ker_shape)
-    return output
+    # TODO ??
+    @parallel (1:layer.output_shape[1], 1:layer.output_shape[2], 1:layer.output_shape[3]) reduction_functions![layer.operator_id](input, layer.out_buffer)
 end
 
 
-function submit_output(io::ADIOS2.AIO, engine::ADIOS2.Engine, input::LocalDomain, global_shape)
+function submit_output(io::ADIOS2.AIO, engine::ADIOS2.Engine, input::LocalLayer, global_shape)
 
-    define_variable(io, "out", Float64, global_shape, input.start, input.size)
+    # TODO NOT REDEFINE
+    @show collapseDims(input.output_start, input.output_shape), collapseDims(input.output_shape)
+
+    # NOTE THIS WILL TRIGGER AN ERROR ON VERY SMALL DOMAINS
+    define_variable(io, "out", Float64, collapseDims(global_shape), collapseDims(input.output_start, input.output_shape), collapseDims(input.output_shape))
 
     y = inquire_variable(io, "out")
-
-    # TODO COLLAPSE
 
     if isnothing(y)
         e = ArgumentError("Out var has not been defined yet")
         throw(e)
     end
 
-    @show input.start, input.size, global_shape
+    @show input.output_start, input.output_shape, global_shape
 
-    put!(engine, y, input.data)
+    put!(engine, y, input.out_buffer)
+    perform_puts!(engine)
+end
+
+
+function submit_Loutput(io::ADIOS2.AIO, engine::ADIOS2.Engine, input::LocalLayer, global_shape)
+
+    define_variable(io, "L", Float64, global_shape, input.output_start, input.output_shape)
+
+    y = inquire_variable(io, "L")
+
+    if isnothing(y)
+        e = ArgumentError("Out var has not been defined yet")
+        throw(e)
+    end
+
+    @show input.output_start, input.output_shape, global_shape
+
+    put!(engine, y, input.out_buffer)
     perform_puts!(engine)
 end
 
@@ -120,15 +154,25 @@ function reduction_execution(e :: ExecutionInstance)
         # INPUT CHUNK
         output = get_input(e.input_IO, e.input_engine,
                            e.pipeline_config[:var_name],
-                           input_shape(e), input_start(e))
+                           input_start(e), input_shape(e))
 
+
+        submit_Loutput(e.output_IO, e.output_engine, LocalLayer(
+            1,
+            (3,),
+            (3,),
+            input_start(e),
+            input_shape(e),
+            (3,),
+            output
+        ), (1000,1000,1))
         # PROCESS CHUNK
         for i in 1:e.pipeline_config[:n_layers]
-            output = execute_layer(output, e.localized_layers[i])
+            execute_layer!(i == 1 ? output : e.localized_layers[i - 1].out_buffer, e.localized_layers[i])
         end
 
         # OUTPUT CHUNK TODO SIMPLIFY
-        submit_output(e.output_IO, e.output_engine, output, e.global_output_shape)
+        submit_output(e.output_IO, e.output_engine, e.localized_layers[end], e.global_output_shape)
 
         end_step(e.input_engine)
         end_step(e.output_engine)
@@ -208,6 +252,10 @@ function main()
 
         input_engine = open(input_io, "/scratch/snx3000/dvegarod/sst-file", mode_read)#pipeline_config[:engine], mode_read)
 
+        if input_engine isa Nothing
+            @error "Unable to connect to the input, maybe it is not online"
+        end
+
         # ADIOS INIT OUTPUT STREAM
         output_io = declare_io(adios, "OUTPUT_IO")
 
@@ -216,13 +264,15 @@ function main()
         @warn "Reached pipeline beginning $input_engine"
 
         # Calculate local pipeline shapes
-        layers = calculateShape(pipeline_config[:layer_config], Tuple(pipeline_config[:var_shape]), pipeline_config[:n_layers], rank, dims)
+        layers = calculateShape(pipeline_config[:layer_config], Tuple(pipeline_config[:var_shape]), pipeline_config[:n_layers], rank, Tuple(dims))
+
+        #@show layers
 
         exec_instance = ExecutionInstance(
             last_id,
             rank,
             size,
-            dims,
+            Tuple(dims),
             input_io,
             output_io,
             input_engine,

@@ -13,9 +13,9 @@ builder = reducer.reduction(builder, ker1, :average)
 # Launch
 reducer.build(builder)
 
-adios = adios_init_serial()
-io = declare_io(adios, "COMM_IO")
-engine = open(io, "reducer-r.bp", mode_readRandomAccess)
+#adios = adios_init_serial()
+#io = declare_io(adios, "COMM_IO")
+#engine = open(io, "reducer-r.bp", mode_readRandomAccess)
 
 #@assert reducer.@check_for_val_w_timeout((f() = reducer._get(io, engine, :exec_ready)), 1, 10)
 

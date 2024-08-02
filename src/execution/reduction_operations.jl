@@ -20,6 +20,6 @@ end
 
 
 
-reduction_functions = Function[
+reduction_functions! = Function[
     reduction_avg!
 ]
