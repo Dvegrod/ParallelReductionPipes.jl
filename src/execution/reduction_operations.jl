@@ -7,10 +7,12 @@
         # Index over a kernel region caution: Julia indexing makes it confusing (+1 and -1 added for that)
         lowx = 1 + (ix - 1) * factor[1]
         lowy = 1 + (iy - 1) * factor[2]
+        lowz = 1 + (iz - 1) * factor[3]
         highx = factor[1] + lowx - 1
         highy = factor[2] + lowy - 1
+        highz = factor[3] + lowz - 1
 
-        Small[ix, iy] = reduce(+, Big[lowx:highx, lowy:highy]) ./ prod(factor)
+        Small[ix, iy, iz] = reduce(+, Big[lowx:highx, lowy:highy, lowz:highz]) ./ prod(factor)
     else
         error("Sizes dont match $remdr")
     end
@@ -18,8 +20,14 @@
 end
 
 
+function loadCustomOperations(path :: String)
+    include(path)
+    push!(custom_reduction_functions!, Custom.kernel!)
+end
 
 
 reduction_functions! = Function[
     reduction_avg!
 ]
+
+custom_reduction_functions! = Function[]
