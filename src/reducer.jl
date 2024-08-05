@@ -33,14 +33,15 @@ include("blueprinting/connection.jl")
 
 
 # Code related to the actual execution of the pipeline
-using MPI
-
-include("execution/local_domains.jl")
-include("execution/reduction_operations.jl")
-include("execution/communication.jl")
-include("execution/main.jl")
 
 if abspath(PROGRAM_FILE) == @__FILE__
+    @warn "AAA"
+    using MPI
+
+    include("execution/local_domains.jl")
+    include("execution/reduction_operations.jl")
+    include("execution/communication.jl")
+    include("execution/main.jl")
     main()
 end
 

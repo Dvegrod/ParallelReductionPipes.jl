@@ -54,6 +54,14 @@ struct Var
     shape:: Vector{Int}
 end
 
+struct Connection
+    adios       :: ADIOS2.Adios
+    io_read     :: ADIOS2.AIO
+    io_write    :: ADIOS2.AIO
+    engine_read :: ADIOS2.Engine
+    engine_write :: ADIOS2.Engine
+end
+
 metadata = Dict([
     :ready      => Var("config_ready", Int, []),
     :exec_ready => Var("reducer_ready", Int, []),

@@ -59,12 +59,33 @@ function exportPipelineConfiguration(adios_engine :: ADIOS2.Engine,
     return
 end
 
+# TODO CAN BE MERGED WITH LISTEN
+function checkReady(io::ADIOS2.AIO, engine::ADIOS2.Engine, comm::MPI.Comm)::Bool
+    bool = false
+    if MPI.Comm_rank(comm) == 0
+        for _ in 1:TRIALS
+            config_ready = _get(io, engine, :exec_ready)
 
-function build(builder::PipelineBuilder)
+            @show config_ready
+
+            if config_ready !== nothing && config_ready > 0
+                bool = true
+                break
+            end
+
+            @info "Runtime is alive"
+            sleep(1)
+        end
+    end
+    bool = MPI.Bcast(bool, 0, comm)
+    return bool
+end
+
+function build(builder::PipelineBuilder, runtime_dir :: String = ".")
 
     adios = adios_init_serial()
     io = declare_io(adios, "COMM_IO")
-    engine = open(io, "reducer-l.bp", mode_write)
+    engine = open(io, runtime_dir*"/reducer-l.bp", mode_write)
 
     defineMetadata(io)
 
@@ -76,5 +97,16 @@ function build(builder::PipelineBuilder)
 
     _set(io, engine, :ready, 1)
 
-    close(engine)
+    io_read = declare_io(adios, "OUT_IO")
+    engine_read = open(io_read, runtime_dir*"/reducer-o.bp", mode_readRandomAccess)
+
+    checkReady(io_read, engine_read)
+#todo another stream
+    return Connection(
+        adios,
+        io_read,
+        io,
+        engine_read,
+        engine
+    )
 end
