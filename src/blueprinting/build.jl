@@ -60,26 +60,21 @@ function exportPipelineConfiguration(adios_engine :: ADIOS2.Engine,
 end
 
 # TODO CAN BE MERGED WITH LISTEN
-function checkReady(io::ADIOS2.AIO, engine::ADIOS2.Engine, comm::MPI.Comm)::Bool
+function checkReady(io::ADIOS2.AIO, engine::ADIOS2.Engine)::Bool
     bool = false
-    if MPI.Comm_rank(comm) == 0
-        for _ in 1:TRIALS
-            config_ready = _get(io, engine, :exec_ready)
+    for _ in 1:TRIALS
+        config_ready = _get(io, engine, :exec_ready)
 
-            @show config_ready
+        @show config_ready
 
-            if config_ready !== nothing && config_ready > 0
-                bool = true
-                break
-            end
-
-            @info "Runtime is alive"
-            sleep(1)
+        if config_ready !== nothing && config_ready > 0
+            bool = true
+            break
         end
     end
-    bool = MPI.Bcast(bool, 0, comm)
     return bool
 end
+
 
 function build(builder::PipelineBuilder, runtime_dir :: String = ".")
 
