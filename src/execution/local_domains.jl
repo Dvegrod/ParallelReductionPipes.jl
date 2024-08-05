@@ -5,7 +5,7 @@ struct LocalDomain
     size :: Tuple
 end
 
-function transform(big_domain :: LocalDomain, kernel :: Tuple, buffer :: Array) :: LocalDomain
+function transform(big_domain :: LocalDomain, kernel :: Tuple, buffer :: Data.Array) :: LocalDomain
 
     # TODO Inexact
     new_start = div.(big_domain.start, kernel)
@@ -64,7 +64,7 @@ function calculateShape(layer_config :: Array{Int}, input_shape :: Tuple, n_laye
             local_output_start,
             local_output_shape,
             global_kernel_shape,
-            Array{Float64}(undef, local_output_shape...)
+            Data.Array{Float64}(undef, local_output_shape...)
         ))
 
         @show local_output_start, local_output_shape

@@ -60,7 +60,7 @@ function collapseDims(start :: Tuple, shape :: Tuple)
 end
 
 function get_input(io :: ADIOS2.AIO, engine::ADIOS2.Engine,
-                   var_name :: String, start :: Tuple, size :: Tuple) :: Array
+                   var_name :: String, start :: Tuple, size :: Tuple) :: Data.Array
 
     y = inquire_variable(io, var_name)
 
@@ -72,7 +72,7 @@ function get_input(io :: ADIOS2.AIO, engine::ADIOS2.Engine,
     @show start,size
     set_selection(y, collapseDims(start, size), collapseDims(size))
 
-    array = Array{type(y)}(undef, collapseDims(size)...)
+    array = Data.Array{type(y)}(undef, collapseDims(size)...)
 
     get(engine, y, array)
 
@@ -98,7 +98,7 @@ function reduce_dim(in :: Tuple) :: Tuple
     return Tuple(t)
 end
 
-function execute_layer!(input :: Array, layer :: LocalLayer)
+function execute_layer!(input :: Data.Array, layer :: LocalLayer)
 
     # TODO ??
     @parallel (1:layer.output_shape[1], 1:layer.output_shape[2], 1:layer.output_shape[3]) reduction_functions![layer.operator_id](input, layer.out_buffer)

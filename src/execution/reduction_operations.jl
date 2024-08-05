@@ -1,6 +1,6 @@
 
 #TODO : change to agnostic array
-@parallel_indices (ix, iy, iz) inbounds = true function reduction_avg!(Big::Array{Float64}, Small::Array{Float64})
+@parallel_indices (ix, iy, iz) inbounds = true function reduction_avg!(Big::Data.Array{Float64}, Small::Data.Array{Float64})
     factor = div.(size(Big), size(Small))
     remdr = rem.(size(Big), size(Small))
     if sum(remdr) == 0

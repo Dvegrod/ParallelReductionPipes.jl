@@ -39,7 +39,7 @@ struct LocalLayer
     output_shape::Tuple
     kernel_shape::Tuple
 
-    out_buffer :: Array
+    out_buffer :: Data.Array
 end
 
 struct PipelineBuilder
