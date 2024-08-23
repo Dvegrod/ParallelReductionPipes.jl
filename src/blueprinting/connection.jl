@@ -1,12 +1,5 @@
 
-
-struct Connection
-    adios       :: ADIOS2.Adios
-    io_read     :: ADIOS2.AIO
-    io_write    :: ADIOS2.AIO
-    engine_read :: ADIOS2.Engine
-    engine_write :: ADIOS2.Engine
-end
+connection :: Union{Nothing, Connection} = nothing
 
 function getStep(connection :: Connection, step_number :: Int) :: Array
     y = inquire_variable(connection.io_read, "out")

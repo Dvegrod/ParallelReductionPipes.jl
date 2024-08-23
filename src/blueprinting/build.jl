@@ -60,48 +60,47 @@ function exportPipelineConfiguration(adios_engine :: ADIOS2.Engine,
 end
 
 # TODO CAN BE MERGED WITH LISTEN
-function checkReady(io::ADIOS2.AIO, engine::ADIOS2.Engine)::Bool
-    bool = false
-    for _ in 1:TRIALS
-        config_ready = _get(io, engine, :exec_ready)
+# function checkReady(io::ADIOS2.AIO, engine::ADIOS2.Engine)::Bool
+#     bool = false
+#     for _ in 1:100
+#         config_ready = _get(io, engine, :exec_ready)
 
-        @show config_ready
+#         @show config_ready
 
-        if config_ready !== nothing && config_ready > 0
-            bool = true
-            break
-        end
+#         if config_ready !== nothing && config_ready > 0
+#             bool = true
+#             break
+#         end
+#     end
+#     return bool
+# end
+
+
+
+function build(builder::PipelineBuilder, custom)
+
+    path = "."
+
+    c = Connection(path, false, 30)
+    ar,ir,er = connect(c)
+    aw,iw,ew = setup(c)
+
+    ready = _get(ir, er, :exec_ready)
+    @info "runtime detected ready = $ready"
+
+    defineMetadata(iw)
+
+    definePipelineConfigurationStructure(iw)
+
+    vars = inquirePipelineConfigurationStructure(iw)
+
+    exportPipelineConfiguration(ew, vars, builder)
+
+    if custom !== nothing
+        _set(iw, ew, :custom, custom)
     end
-    return bool
-end
 
+    _set(iw, ew, :ready, 1)
 
-function build(builder::PipelineBuilder, runtime_dir :: String = ".")
-
-    adios = adios_init_serial()
-    io = declare_io(adios, "COMM_IO")
-    engine = open(io, runtime_dir*"/reducer-l.bp", mode_write)
-
-    defineMetadata(io)
-
-    definePipelineConfigurationStructure(io)
-
-    vars = inquirePipelineConfigurationStructure(io)
-
-    exportPipelineConfiguration(engine, vars, builder)
-
-    _set(io, engine, :ready, 1)
-
-    io_read = declare_io(adios, "OUT_IO")
-    engine_read = open(io_read, runtime_dir*"/reducer-o.bp", mode_readRandomAccess)
-
-    checkReady(io_read, engine_read)
-#todo another stream
-    return Connection(
-        adios,
-        io_read,
-        io,
-        engine_read,
-        engine
-    )
+    close(engine_comm_write)
 end

@@ -1,7 +1,4 @@
 
-
-
-
 struct Input
     var_name        :: AbstractString
     engine_name     :: AbstractString
@@ -31,16 +28,6 @@ struct Layer
 end
 _shape(layer::Layer) = Tuple(layer.output_shape)
 
-struct LocalLayer
-    operator_id ::Int
-    input_start ::Tuple
-    input_shape ::Tuple
-    output_start::Tuple
-    output_shape::Tuple
-    kernel_shape::Tuple
-
-    out_buffer :: Data.Array
-end
 
 struct PipelineBuilder
     input              :: Input
@@ -54,19 +41,12 @@ struct Var
     shape:: Vector{Int}
 end
 
-struct Connection
-    adios       :: ADIOS2.Adios
-    io_read     :: ADIOS2.AIO
-    io_write    :: ADIOS2.AIO
-    engine_read :: ADIOS2.Engine
-    engine_write :: ADIOS2.Engine
-end
-
 metadata = Dict([
     :ready      => Var("config_ready", Int, []),
     :exec_ready => Var("reducer_ready", Int, []),
     :stop       => Var("stop"        , Int, []),
     :debug      => Var("debug"       , Int, []),
+    :custom     => Var("custom_module", String, []),
 ])
 
 # Debug:

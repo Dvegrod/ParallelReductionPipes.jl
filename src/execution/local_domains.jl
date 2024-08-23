@@ -64,7 +64,7 @@ function calculateShape(layer_config :: Array{Int}, input_shape :: Tuple, n_laye
             local_output_start,
             local_output_shape,
             global_kernel_shape,
-            Data.Array{Float64}(undef, local_output_shape...)
+            Data.Array(undef, local_output_shape...)
         ))
 
         @show local_output_start, local_output_shape

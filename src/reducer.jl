@@ -7,9 +7,6 @@ struct CUDABackend <: AbstractBackend end
 backend = CPUBackend
 
 using ADIOS2
-using ParallelStencil
-
-@init_parallel_stencil(Threads, Float64, 3)
 
 ALL::Int = -1
 
@@ -23,26 +20,14 @@ supported_types = Type[
 include("blueprinting/structs.jl")
 
 include("shared.jl")
-
 include("blueprinting/input.jl")
 include("blueprinting/kernels.jl")
 include("blueprinting/operators.jl")
+include("blueprinting/custom.jl")
 include("blueprinting/reduction.jl")
 include("blueprinting/build.jl")
-include("blueprinting/connection.jl")
 
 
-# Code related to the actual execution of the pipeline
+main(n :: Nothing) = error("MPI is needed for the reducer runtime, use MPI to enable the extension")
 
-if abspath(PROGRAM_FILE) == @__FILE__
-    @warn "AAA"
-    using MPI
-
-    include("execution/local_domains.jl")
-    include("execution/reduction_operations.jl")
-    include("execution/communication.jl")
-    include("execution/main.jl")
-    main()
 end
-
-end # module reducer

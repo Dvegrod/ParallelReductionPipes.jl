@@ -1,35 +1,4 @@
 
-struct ExecutionInstance
-    # Execution instance id
-    id            ::Int
-
-    # MPI
-    rank          ::Int
-    size          ::Int
-    dims          ::Tuple
-
-    # IN and OUT
-    input_IO      ::ADIOS2.AIO
-    output_IO     ::ADIOS2.AIO
-    input_engine  ::ADIOS2.Engine
-    output_engine ::ADIOS2.Engine
-
-    # Parameters to setup reduction pipeline
-    # Keys defined at: ../structs.jl
-    pipeline_config :: Dict{Symbol, Any}
-
-    # Local version of the layers with chunk based sizes
-    localized_layers :: Vector{LocalLayer}
-
-    global_output_shape :: Tuple
-end
-
-input_shape(e::ExecutionInstance) = e.localized_layers[1].input_shape
-input_start(e::ExecutionInstance) = e.localized_layers[1].input_start
-
-output_shape(e::ExecutionInstance) = e.localized_layers[end].output_shape
-output_start(e::ExecutionInstance) = e.localized_layers[end].output_start
-
 
 flags = Dict{String,Bool}([
    "--log" => true
@@ -72,7 +41,7 @@ function get_input(io :: ADIOS2.AIO, engine::ADIOS2.Engine,
     @show start,size
     set_selection(y, collapseDims(start, size), collapseDims(size))
 
-    array = Data.Array{type(y)}(undef, collapseDims(size)...)
+    array = Data.Array(undef, collapseDims(size)...)
 
     get(engine, y, array)
 
@@ -185,6 +154,16 @@ function cleanup_instance(e :: ExecutionInstance)
     GC.gc()
 end
 
+function includeCustoms(conn)
+    path = reducer._get(conn, :custom)
+    if path isa Nothing
+        @info "No customs detected"
+        return
+    else
+        loadCustomOperations(path)
+    end
+end
+
 
 # THERE ARE 4 ADIOS STREAMS GOING ON
 #   A. CONTROL PLANE (BP5) (called comm in variable names)
@@ -195,6 +174,7 @@ end
 #      2. Output data
 
 function main()
+    @info "ON"
     # Initialization
     # MPI
     MPI.Init()
@@ -204,6 +184,10 @@ function main()
 
     dims = MPI.Dims_create(size, [0,0,1])
 
+    @info "ON"
+    # Pipeline adios
+    adios = adios_init_mpi("adios_config.xml", MPI.COMM_WORLD)
+
     # Flag parse
     for i in ARGS
         if i in keys(flags)
@@ -212,62 +196,67 @@ function main()
         end
     end
 
-    # ADIOS INIT COMMUNICATION STREAM
-    adios = adios_init_mpi("adios_config.xml", MPI.COMM_WORLD)
-
-    comm_io = declare_io(adios, "OUTCOMMIO_WRITE")
-
-    comm_engine = open(comm_io, "reducer-r.bp", mode_write)
-
-    ready(comm_io, comm_engine, MPI.COMM_WORLD, 1)
-
-    comm_io2 = declare_io(adios, "OUTCOMMIO_READ")
-
-    # WAIT FOR reducer-l.bp existence
-    # TODO
+    connection = MPIConnection(".", true, 10000, MPI.COMM_WORLD)
 
     # # Logger
     # if flags["--log"]
     #     logfile = open("./reducer-logs.log", mode_write)
     # end
 
-    comm_engine2 = open(comm_io2, "reducer-l.bp", mode_readRandomAccess)
-
     last_id = 0
     for _ in 1:1
+
+        @info "ON LOOP"
         # LISTEN FOR CONFIGURATION ARRIVAL
-        if !listen(comm_io2, comm_engine2, MPI.COMM_WORLD, last_id)
-            error("Listen timeout, $TRIALS trials.")
+        ready(connection, 1)
+        if !listen(connection, last_id)
+            error("Listen timeout, $TRIALS TODO DEPRECATED trials.")
         end
-        last_id = _get(comm_io2, comm_engine2, :ready)
+        last_id = reducer._get(connection, :ready)
 
         # Get pipeline config
-        pipeline_vars = inquirePipelineConfigurationStructure(comm_io2)
-        pipeline_config = getPipelineConfigurationStructure(comm_engine2, pipeline_vars)
+        @info "ON CONNECT"
+        ar,ir,er = connect(connection)
+        pipeline_vars = reducer.inquirePipelineConfigurationStructure(ir)
+        pipeline_config = reducer.getPipelineConfigurationStructure(er, pipeline_vars)
 
-        ready(comm_io, comm_engine, MPI.COMM_WORLD, 2)
+        # Check if there are custom kernels TODO
+        includeCustoms(connection)
+        @show custom_reduction_functions!
+
+        ready(connection, 2)
 
         # ADIOS INIT INPUT STREAM
         input_io = declare_io(adios, "INPUT_IO")
 
-        input_engine = open(input_io, "/scratch/snx3000/dvegarod/sst-file", mode_read)#pipeline_config[:engine], mode_read)
+        input_engine = nothing
 
+        while true
+
+         input_engine = open(input_io, "/scratch/snx3000/dvegarod/sst-file", mode_read)#pipeline_config[:engine], mode_read)
         if input_engine isa Nothing
             @error "Unable to connect to the input, maybe it is not online"
+            sleep(2)
+        else
+            break
         end
 
+        end
+
+        @info "ON OUTPUT"
         # ADIOS INIT OUTPUT STREAM
         output_io = declare_io(adios, "OUTPUT_IO")
 
         output_engine = open(output_io, "reducer-o.bp", mode_write)
 
-        @warn "Reached pipeline beginning $input_engine"
+        @warn "Reached pipeline beginning"
 
         # Calculate local pipeline shapes
         layers = calculateShape(pipeline_config[:layer_config], Tuple(pipeline_config[:var_shape]), pipeline_config[:n_layers], rank, Tuple(dims))
 
         #@show layers
 
+        @info "ON EXEC"
         exec_instance = ExecutionInstance(
             last_id,
             rank,
@@ -285,11 +274,9 @@ function main()
         reduction_execution(exec_instance)
         cleanup_instance(exec_instance)
 
-        ready(comm_io, comm_engine, MPI.COMM_WORLD, 1)
+        ready(connection, 1)
     end
 
-    close(comm_engine)
-    close(comm_engine2)
     MPI.Finalize()
 
 end

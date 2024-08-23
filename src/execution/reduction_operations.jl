@@ -1,6 +1,6 @@
 
 #TODO : change to agnostic array
-@parallel_indices (ix, iy, iz) inbounds = true function reduction_avg!(Big::Data.Array{Float64}, Small::Data.Array{Float64})
+@parallel_indices (ix, iy, iz) inbounds = true function reduction_avg!(Big::Data.Array, Small::Data.Array)
     factor = div.(size(Big), size(Small))
     remdr = rem.(size(Big), size(Small))
     if sum(remdr) == 0
@@ -17,6 +17,10 @@
         error("Sizes dont match $remdr")
     end
     return
+end
+
+
+module CCustom
 end
 
 
