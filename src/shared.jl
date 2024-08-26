@@ -224,6 +224,49 @@ function _set(connection :: AbstractConnection, key::Symbol, value::Any)
     close(engine)
 end
 
+# WARNING THE FIRST OVERWRITES THE ENTIRE FILE THIS ONE DOES NOT
+function _set(io, ADIOS2::AIO, engine :: ADIOS2.Engine, key::Symbol, value::Any)
+
+    if key in keys(metadata)
+        y = inquire_variable(io, metadata[key].name)
+
+        if isnothing(y)
+            e = ArgumentError("Invalid key $key, value is not available on the specified IO")
+            throw(e)
+        end
+
+        put!(engine, y, value)
+
+        perform_puts!(engine)
+
+    else
+        if key in var_repository
+            e = ErrorException("Not implemented for var_repository")
+            throw(e)
+        else
+            e = ArgumentError("Invalid key $key")
+            throw(e)
+        end
+    end
+
+end
+
+function _set(io :: ADIOS2.AIO, engine :: ADIOS2.Engine, var :: Var, value::Any)
+
+        y = inquire_variable(io, var.name)
+
+        if isnothing(y)
+            e = ArgumentError("Invalid key $key, value is not available on the specified IO")
+            throw(e)
+        end
+
+        put!(engine, y, value)
+
+        perform_puts!(engine)
+
+
+end
+
 function declare_and_set(connection :: AbstractConnection, var_data::Var, value::Any)
 
     a,io,engine = setup(connection)
@@ -252,4 +295,32 @@ function declare_and_set(connection :: AbstractConnection, var_data::Var, value:
 
     close(engine)
     finalize(a)
+end
+
+
+function declare_and_set(io :: ADIOS2.AIO, engine :: ADIOS2.Engine, var_data::Var, value::Any)
+
+
+    y = inquire_variable(io, var_data.name)
+
+    if !isnothing(y)
+        e = ArgumentError("Invalid definition $var_data.name, already defined on the specified IO")
+        throw(e)
+    end
+
+    if length(var_data.shape) > 0
+        sh = Tuple(var_data.shape)
+        st = Tuple([0 for i in var_data.shape])
+        cn = Tuple(var_data.shape)
+    else
+        sh = nothing
+        st = nothing
+        cn = nothing
+    end
+    y = define_variable(io, var_data.name, var_data.type, sh, st, cn)
+
+    put!(engine, y, value)
+
+    perform_puts!(engine)
+
 end

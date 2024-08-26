@@ -1,8 +1,16 @@
 
 
-using MPI
-using reducer
+if ARGS[1] == "CPU"
+    using MPI
+    using reducer
 
 
-reducer.main()
-reducer.main(nothing)
+    reducer.main(reducer.CPUBackend)
+else
+    using CUDA
+    using MPI
+
+    using reducer
+
+    reducer.main(reducer.CUDABackend)
+end

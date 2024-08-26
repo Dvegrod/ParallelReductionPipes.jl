@@ -1,14 +1,13 @@
-module reducer_MPIExt
-   using reducer, MPI
+module reducer_CUDAExt
 
-#reducer.MPIConnection = MPIConnection
-
-
+using reducer
 using MPI
 using ParallelStencil
 using ADIOS2
+import CUDA
 
-@init_parallel_stencil(Threads, Float64, 3)
+@init_parallel_stencil(CUDA, Float64, 3)
+
 
 include("../src/execution/structs.jl")
 include("../src/execution/local_domains.jl")
@@ -21,6 +20,5 @@ reducer.setup(connection :: MPIConnection) = setup(connection)
 include("../src/execution/main.jl")
 
 
-reducer.main(backend :: Type{<: reducer.CPUBackend}) = main()
-
+reducer.main(backend :: Type{<: reducer.CUDABackend}) = main()
 end

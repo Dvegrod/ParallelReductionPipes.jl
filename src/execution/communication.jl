@@ -1,4 +1,40 @@
 
+
+# Code related to the actual execution of the pipeline
+
+struct MPIConnection <: reducer.AbstractConnection
+    location :: String
+    side     :: Bool
+    timeout  :: Int
+    comm     :: MPI.Comm
+end
+
+
+function connect(connection :: MPIConnection)
+
+    side = joinpath(connection.location, reducer.connectionGetSide(connection.side))
+
+    reducer.wait_for_existence(side, connection.timeout)
+
+    adios = adios_init_mpi(connection.comm)
+    comm_io = declare_io(adios, side * "IO")
+    comm_engine = open(comm_io, side, mode_readRandomAccess)
+    @info "CONNECTION: connected to $side $(stacktrace())"
+    return (adios,comm_io,comm_engine)
+end
+
+
+function setup(connection :: MPIConnection)
+
+    side = joinpath(connection.location, reducer.connectionGetSide(!connection.side))
+
+    adios = adios_init_mpi(connection.comm)
+    comm_io = declare_io(adios, side * "IOw")
+    comm_engine = open(comm_io, side, mode_write)
+    @info "SETUP: connected to $side"
+    return (adios,comm_io,comm_engine)
+end
+
 TRIALS = 2
 
 function ready(connection :: MPIConnection, ready_val :: Int)

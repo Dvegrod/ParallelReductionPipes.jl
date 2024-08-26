@@ -69,8 +69,12 @@ end
 
 function execute_layer!(input :: Data.Array, layer :: LocalLayer)
 
-    # TODO ??
-    @parallel (1:layer.output_shape[1], 1:layer.output_shape[2], 1:layer.output_shape[3]) reduction_functions![layer.operator_id](input, layer.out_buffer)
+    id = layer.operator_id
+    if id > 0
+        @parallel (1:layer.output_shape[1], 1:layer.output_shape[2], 1:layer.output_shape[3]) reduction_functions![layer.operator_id](input, layer.out_buffer)
+    else
+        @parallel (1:layer.output_shape[1], 1:layer.output_shape[2], 1:layer.output_shape[3]) invokelatest(custom_reduction_functions![-1 * id], input, layer.out_buffer)
+    end
 end
 
 
@@ -155,6 +159,7 @@ function cleanup_instance(e :: ExecutionInstance)
 end
 
 function includeCustoms(conn)
+    c = MPIConnection(conn.location, conn.side, 1, conn.comm)
     path = reducer._get(conn, :custom)
     if path isa Nothing
         @info "No customs detected"
@@ -220,7 +225,7 @@ function main()
         pipeline_vars = reducer.inquirePipelineConfigurationStructure(ir)
         pipeline_config = reducer.getPipelineConfigurationStructure(er, pipeline_vars)
 
-        # Check if there are custom kernels TODO
+        # Check if there are custom kernels
         includeCustoms(connection)
         @show custom_reduction_functions!
 

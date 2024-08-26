@@ -36,7 +36,7 @@ let
     end
 
     global function addCustomOperatorToBlueprints(name::String, symbol :: Symbol)
-        push!(custom_operator_by_id, Operator(name, Float64, Float64, length(custom_operator_by_id)  + 1, symbol))
+        push!(custom_operator_by_id, Operator(name, Float64, Float64, -1 * (length(custom_operator_by_id)  + 1), symbol))
         return length(custom_operator_by_id)
     end
 end

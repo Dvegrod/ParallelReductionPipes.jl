@@ -1,11 +1,5 @@
 module reducer
 
-abstract type AbstractBackend end
-struct CPUBackend <: AbstractBackend end
-struct CUDABackend <: AbstractBackend end
-
-backend = CPUBackend
-
 using ADIOS2
 
 ALL::Int = -1
@@ -28,6 +22,11 @@ include("blueprinting/reduction.jl")
 include("blueprinting/build.jl")
 
 
-main(n :: Nothing) = error("MPI is needed for the reducer runtime, use MPI to enable the extension")
+abstract type AbstractBackend end
+struct CUDABackend <: AbstractBackend end
+struct CPUBackend <: AbstractBackend end
+
+main(backend :: Type{<: AbstractBackend}) = error("Invalid, or disabled backend, check dependencies ($backend)")
+
 
 end

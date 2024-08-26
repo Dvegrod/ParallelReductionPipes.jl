@@ -52,7 +52,6 @@ function exportPipelineConfiguration(adios_engine :: ADIOS2.Engine,
     put!(adios_engine, var_dict[:layer_config], layers)
 
 
-
     err = perform_puts!(adios_engine)
     @assert err === error_none
 
@@ -82,25 +81,21 @@ function build(builder::PipelineBuilder, custom)
     path = "."
 
     c = Connection(path, false, 30)
-    ar,ir,er = connect(c)
-    aw,iw,ew = setup(c)
 
-    ready = _get(ir, er, :exec_ready)
+    ready = _get(c, :exec_ready)
     @info "runtime detected ready = $ready"
 
+    aw,iw,ew = setup(c)
     defineMetadata(iw)
-
     definePipelineConfigurationStructure(iw)
-
     vars = inquirePipelineConfigurationStructure(iw)
-
     exportPipelineConfiguration(ew, vars, builder)
 
     if custom !== nothing
-        _set(iw, ew, :custom, custom)
+        _set(iw, ew, metadata[:custom], custom)
     end
 
-    _set(iw, ew, :ready, 1)
+    _set(iw, ew, metadata[:ready], 1)
 
-    close(engine_comm_write)
+    close(ew)
 end

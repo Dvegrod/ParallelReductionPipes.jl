@@ -1,5 +1,4 @@
 
-connection :: Union{Nothing, Connection} = nothing
 
 function getStep(connection :: Connection, step_number :: Int) :: Array
     y = inquire_variable(connection.io_read, "out")
