@@ -1,4 +1,4 @@
-module reducer
+module ParallelReductionPipes
 
 using ADIOS2
 using MacroTools

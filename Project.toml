@@ -1,4 +1,4 @@
-name = "reducer"
+name = "ParallelReductionPipes"
 uuid = "071b913d-17cb-47fe-ac3b-24d020533912"
 authors = ["Dvegrod <dvegrodu@gmail.com>"]
 version = "0.1.0"
@@ -6,12 +6,9 @@ version = "0.1.0"
 [deps]
 ADIOS2 = "e0ce9d3b-0dbd-416f-8264-ccca772f60ec"
 BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
-CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba"
 HDF5 = "f67ccb44-e63f-5c2f-98bd-6dc0ccc4ba2f"
-MPI = "da04e1cc-30fd-572f-bb4f-1f8673147195"
 MacroTools = "1914dd2f-81c6-5fcd-8719-6d5c9610ff09"
 ParallelStencil = "94395366-693c-11ea-3b26-d9b7aac5d958"
-Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [weakdeps]
@@ -19,5 +16,5 @@ CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba"
 MPI = "da04e1cc-30fd-572f-bb4f-1f8673147195"
 
 [extensions]
-reducer_CUDAExt = "CUDA"
-reducer_MPIExt = "MPI"
+ParallelReductionPipes_CUDAExt = "CUDA"
+ParallelReductionPipes_MPIExt = "MPI"

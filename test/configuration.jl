@@ -1,7 +1,7 @@
 
 @testset "Pipeline configuration tests" begin
 
-    builder::reducer.PipelineBuilder = reducer.input("var_name", filename, "", [100, 100, 10], Float64)
+    builder::ParallelReductionPipes.PipelineBuilder = ParallelReductionPipes.input("var_name", filename, "", [100, 100, 10], Float64)
 
     @testset "Builder tests" begin
 
@@ -12,21 +12,21 @@
             @test builder.input.config_file == ""
             @test builder.input.var_shape == [100,100,10]
 
-            @test_throws ErrorException reducer.input("a","b", "", [], String)
+            @test_throws ErrorException ParallelReductionPipes.input("a","b", "", [], String)
         end
 
         # Check shapes get calculated correctly
         @testset "Layers" begin
 
-            @test builder.layers == reducer.Layer[]
+            @test builder.layers == ParallelReductionPipes.Layer[]
 
-            ker1 = reducer.kernel([10, 10, 1])
+            ker1 = ParallelReductionPipes.kernel([10, 10, 1])
 
-            builder_a = reducer.reduction(builder, ker1, :average)
+            builder_a = ParallelReductionPipes.reduction(builder, ker1, :average)
 
-            ker2 = reducer.kernel([12, 12, 10])
+            ker2 = ParallelReductionPipes.kernel([12, 12, 10])
 
-            builder_b = reducer.reduction(builder, ker2, 1)
+            builder_b = ParallelReductionPipes.reduction(builder, ker2, 1)
 
             @test builder_a.layers[1].kernel.dims  == [10, 10, 1]
             @test builder_a.layers[1].output_shape == [10, 10, 10]
@@ -38,28 +38,28 @@
     end
 
     # Add one layer
-    ker1 = reducer.kernel([10, 10, 1])
-    builder = reducer.reduction(builder, ker1, :average)
+    ker1 = ParallelReductionPipes.kernel([10, 10, 1])
+    builder = ParallelReductionPipes.reduction(builder, ker1, :average)
 
     @testset "Serialization tests" begin
 
         @testset "WRITE" begin
 
             # Setup serial ADIOS2
-            connection = reducer.Connection(".", false, 30)
+            connection = ParallelReductionPipes.Connection(".", false, 30)
 
-            a,i,e = reducer.setup(connection)
+            a,i,e = ParallelReductionPipes.setup(connection)
 
-            reducer.definePipelineConfigurationStructure(i)
+            ParallelReductionPipes.definePipelineConfigurationStructure(i)
 
-            vars = reducer.inquirePipelineConfigurationStructure(i)
+            vars = ParallelReductionPipes.inquirePipelineConfigurationStructure(i)
 
             for (key, var) in vars
-                @test reducer.var_repository[key].name == name(var)
+                @test ParallelReductionPipes.var_repository[key].name == name(var)
             end
 
             # Write configuration
-            reducer.exportPipelineConfiguration(e, vars, builder)
+            ParallelReductionPipes.exportPipelineConfiguration(e, vars, builder)
 
             close(e)
             finalize(a)
@@ -70,16 +70,16 @@
         @testset "READ" begin
 
             # Setup serial ADIOS2
-            connection = reducer.Connection(".", true, 30)
-            a,i,e = reducer.connect(connection)
+            connection = ParallelReductionPipes.Connection(".", true, 30)
+            a,i,e = ParallelReductionPipes.connect(connection)
 
-            vars = reducer.inquirePipelineConfigurationStructure(i)
+            vars = ParallelReductionPipes.inquirePipelineConfigurationStructure(i)
 
             for (key, var) in vars
-                @test reducer.var_repository[key].name == name(var)
+                @test ParallelReductionPipes.var_repository[key].name == name(var)
             end
 
-            vals = reducer.getPipelineConfigurationStructure(e, vars)
+            vals = ParallelReductionPipes.getPipelineConfigurationStructure(e, vars)
 
 
             @test vals[:var_name] == "var_name"

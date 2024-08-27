@@ -1,6 +1,6 @@
-module reducer_CUDAExt
+module ParallelReductionPipes_CUDAExt
 
-using reducer
+using ParallelReductionPipes
 using MPI
 using ParallelStencil
 using ADIOS2
@@ -14,11 +14,11 @@ include("../src/execution/local_domains.jl")
 include("../src/execution/reduction_operations.jl")
 include("../src/execution/communication.jl")
 
-reducer.connect(connection :: MPIConnection) = connect(connection)
-reducer.setup(connection :: MPIConnection) = setup(connection)
+ParallelReductionPipes.connect(connection :: MPIConnection) = connect(connection)
+ParallelReductionPipes.setup(connection :: MPIConnection) = setup(connection)
 
 include("../src/execution/main.jl")
 
 
-reducer.main(backend :: Type{<: reducer.CUDABackend}) = main()
+ParallelReductionPipes.main(backend :: Type{<: ParallelReductionPipes.CUDABackend}) = main()
 end

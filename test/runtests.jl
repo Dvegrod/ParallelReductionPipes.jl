@@ -4,7 +4,7 @@ using Base: Filesystem
 
 using Test
 using ADIOS2
-using reducer
+using ParallelReductionPipes
 
 
 # This test file check the blueprinting of pipelines works properly

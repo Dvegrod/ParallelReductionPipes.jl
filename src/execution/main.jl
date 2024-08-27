@@ -163,7 +163,7 @@ end
 
 function includeCustoms(conn)
     c = MPIConnection(conn.location, conn.side, 1, conn.comm)
-    path = reducer._get(conn, :custom)
+    path = ParallelReductionPipes._get(conn, :custom)
     if path isa Nothing
         @info "No customs detected"
         return
@@ -222,13 +222,13 @@ function main()
         if !listen(connection, last_id)
             error("Listen timeout, $TRIALS TODO DEPRECATED trials.")
         end
-        last_id = reducer._get(connection, :ready)
+        last_id = ParallelReductionPipes._get(connection, :ready)
 
         # Get pipeline config
         @info "ON CONNECT"
         ar,ir,er = connect(connection)
-        pipeline_vars = reducer.inquirePipelineConfigurationStructure(ir)
-        pipeline_config = reducer.getPipelineConfigurationStructure(er, pipeline_vars)
+        pipeline_vars = ParallelReductionPipes.inquirePipelineConfigurationStructure(ir)
+        pipeline_config = ParallelReductionPipes.getPipelineConfigurationStructure(er, pipeline_vars)
 
         # Check if there are custom kernels
         includeCustoms(connection)
