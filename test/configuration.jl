@@ -46,23 +46,23 @@
         @testset "WRITE" begin
 
             # Setup serial ADIOS2
-            adios   = adios_init_serial()
-            testIO  = declare_io(adios, "testIO")
-            testENG = open(testIO, builder.input.engine_name, mode_write)
+            connection = reducer.Connection(".", false, 30)
 
-            reducer.definePipelineConfigurationStructure(testIO)
+            a,i,e = reducer.setup(connection)
 
-            vars = reducer.inquirePipelineConfigurationStructure(testIO)
+            reducer.definePipelineConfigurationStructure(i)
+
+            vars = reducer.inquirePipelineConfigurationStructure(i)
 
             for (key, var) in vars
                 @test reducer.var_repository[key].name == name(var)
             end
 
             # Write configuration
-            reducer.exportPipelineConfiguration(testENG, vars, builder)
+            reducer.exportPipelineConfiguration(e, vars, builder)
 
-            close(testENG)
-            finalize(adios)
+            close(e)
+            finalize(a)
         end
 
         #run(`bpls -d $filename`)
@@ -70,17 +70,16 @@
         @testset "READ" begin
 
             # Setup serial ADIOS2
-            adios = adios_init_serial()
-            testIO = declare_io(adios, "testIO")
-            testENG = open(testIO, filename, mode_readRandomAccess)
+            connection = reducer.Connection(".", true, 30)
+            a,i,e = reducer.connect(connection)
 
-            vars = reducer.inquirePipelineConfigurationStructure(testIO)
+            vars = reducer.inquirePipelineConfigurationStructure(i)
 
             for (key, var) in vars
                 @test reducer.var_repository[key].name == name(var)
             end
 
-            vals = reducer.getPipelineConfigurationStructure(testENG, vars)
+            vals = reducer.getPipelineConfigurationStructure(e, vars)
 
 
             @test vals[:var_name] == "var_name"
@@ -89,8 +88,8 @@
             @test vals[:n_layers] == 1
             @test vals[:layer_config][1,:] == [1, 10, 10, 1, 10, 10, 10]
 
-            close(testENG)
-            finalize(adios)
+            close(e)
+            finalize(a)
         end
     end
 

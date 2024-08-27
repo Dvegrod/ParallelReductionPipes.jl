@@ -84,6 +84,7 @@ function main()
     # Setup ADIOS
     adios = adios_init_serial("mandel/adios-config.xml")
     io = declare_io(adios, "IO")
+    @info "$(ENV["SCRATCH"])/sst-file"
     engine = open(io, "$(ENV["SCRATCH"])/sst-file", mode_write)
 
 
