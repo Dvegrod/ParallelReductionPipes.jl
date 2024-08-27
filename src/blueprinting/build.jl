@@ -101,3 +101,5 @@ function build(builder::PipelineBuilder, custom)
 
     close(ew)
 end
+
+buildPipe = build

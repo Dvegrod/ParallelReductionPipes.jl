@@ -20,6 +20,6 @@ ParallelReductionPipes.setup(connection :: MPIConnection) = setup(connection)
 include("../src/execution/main.jl")
 
 
-ParallelReductionPipes.main(backend :: Type{<: ParallelReductionPipes.CPUBackend}) = main()
+ParallelReductionPipes.main(_ :: Type{<: ParallelReductionPipes.CPUBackend}, connection_location = "") = main(connection_location)
 
 end

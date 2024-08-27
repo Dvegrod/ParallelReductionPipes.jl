@@ -24,3 +24,6 @@ function input(var_name, engine_name, config_file, var_shape :: Union{AbstractAr
         0
     )
 end
+
+newPipe = input
+

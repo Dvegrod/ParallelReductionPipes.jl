@@ -181,7 +181,7 @@ end
 #      1. Input data
 #      2. Output data
 
-function main()
+function main(connection_location :: String)
     @info "ON"
     # Initialization
     # MPI
@@ -205,7 +205,7 @@ function main()
         end
     end
 
-    connection = MPIConnection("connection", true, 10000, MPI.COMM_WORLD)
+    connection = MPIConnection(connection_location != "" ? connection_location : "connection", true, 10000, MPI.COMM_WORLD)
 
     # # Logger
     # if flags["--log"]
@@ -236,14 +236,14 @@ function main()
         ready(connection, 2)
 
         # ADIOS INIT INPUT STREAM
-        adios = adios_init_mpi("adios_config.xml", MPI.COMM_WORLD)
+        adios = adios_init_mpi(pipeline_config[:config], MPI.COMM_WORLD)
         input_io = declare_io(adios, "INPUT_IO")
 
         input_engine = nothing
 
         while true
 
-        input_engine = open(input_io, "/scratch/snx3000/dvegarod/sst-file", mode_read)#pipeline_config[:engine], mode_read)
+        input_engine = open(input_io, pipeline_config[:engine], mode_read)#pipeline_config[:engine], mode_read)
         if input_engine isa Nothing
             @error "Unable to connect to the input, maybe it is not online"
             sleep(2)
@@ -257,7 +257,7 @@ function main()
         # ADIOS INIT OUTPUT STREAM
         output_io = declare_io(adios, "OUTPUT_IO")
 
-        output_engine = open(output_io, "reducer-o.bp", mode_write)
+        output_engine = open(output_io, joinpath(connection_location, "reducer-o.bp"), mode_write)
 
         @warn "Reached pipeline beginning"
 
