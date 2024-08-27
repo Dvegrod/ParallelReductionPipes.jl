@@ -196,7 +196,6 @@ function main()
 
     @info "ON"
     # Pipeline adios
-    adios = adios_init_mpi("adios_config.xml", MPI.COMM_WORLD)
 
     # Flag parse
     for i in ARGS
@@ -206,7 +205,7 @@ function main()
         end
     end
 
-    connection = MPIConnection(".", true, 10000, MPI.COMM_WORLD)
+    connection = MPIConnection("connection", true, 10000, MPI.COMM_WORLD)
 
     # # Logger
     # if flags["--log"]
@@ -237,13 +236,14 @@ function main()
         ready(connection, 2)
 
         # ADIOS INIT INPUT STREAM
+        adios = adios_init_mpi("adios_config.xml", MPI.COMM_WORLD)
         input_io = declare_io(adios, "INPUT_IO")
 
         input_engine = nothing
 
         while true
 
-         input_engine = open(input_io, "/scratch/snx3000/dvegarod/sst-file", mode_read)#pipeline_config[:engine], mode_read)
+        input_engine = open(input_io, "/scratch/snx3000/dvegarod/sst-file", mode_read)#pipeline_config[:engine], mode_read)
         if input_engine isa Nothing
             @error "Unable to connect to the input, maybe it is not online"
             sleep(2)

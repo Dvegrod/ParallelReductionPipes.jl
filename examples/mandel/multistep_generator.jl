@@ -82,7 +82,7 @@ function main()
 
     @warn "Reached preadios"
     # Setup ADIOS
-    adios = adios_init_serial("mandel/adios-config.xml")
+    adios = adios_init_serial("examples/mandel/adios_config.xml")
     io = declare_io(adios, "IO")
     @info "$(ENV["SCRATCH"])/sst-file"
     engine = open(io, "$(ENV["SCRATCH"])/sst-file", mode_write)
