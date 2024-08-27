@@ -59,6 +59,7 @@ function calculateShape(layer_config :: Array{Int}, input_shape :: Tuple, n_laye
         # Save layer
         pushfirst!(local_layers, LocalLayer(
             layer_config[i, 1],
+            layer_config[i, 8],
             local_input_start,
             local_input_shape,
             local_output_start,

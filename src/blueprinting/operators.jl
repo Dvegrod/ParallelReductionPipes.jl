@@ -8,6 +8,7 @@ let
             Float64,
             Float64,
             1,
+            0,
             :average
         ),
     ]
@@ -16,7 +17,7 @@ let
 
     custom_operator_by_id::Vector{Operator} = Operator[]
 
-    custom_operator_by_name(name ::String) = Dict{Symbol,Operator}([i.symbol => i for i in operator_by_id])[name]
+    custom_operator_by_name(name :: Symbol) = Dict{Symbol,Operator}([i.symbol => i for i in custom_operator_by_id])[name]
 
     #global parseOperator;
 
@@ -29,14 +30,27 @@ let
                 return custom_operator_by_id[operator_alias * -1]
             end
         elseif operator_alias isa Symbol
-            return operator_by_name[operator_alias]
+            if operator_alias in operator_by_name.keys
+                return operator_by_name[operator_alias]
+            elseif true # TODO
+                return custom_operator_by_name(operator_alias)
+            else
+                throw(ArgumentError("Invalid operator symbol, operator not found"))
+            end
         else
-            return operator_by_name[Symbol(operator_alias)]
+            operator_alias = Symbol(operator_alias)
+            if operator_alias in operator_by_name.keys
+                return operator_by_name[operator_alias]
+            elseif true
+                return custom_operator_by_name(operator_alias)
+            else
+                throw(ArgumentError("Invalid operator name, operator not found"))
+            end
         end
     end
 
-    global function addCustomOperatorToBlueprints(name::String, symbol :: Symbol)
-        push!(custom_operator_by_id, Operator(name, Float64, Float64, -1 * (length(custom_operator_by_id)  + 1), symbol))
+    global function addCustomOperatorToBlueprints(name::String, kind :: Int32)
+        push!(custom_operator_by_id, Operator(name, Float64, Float64, -1 * (length(custom_operator_by_id)  + 1), kind, Symbol(name)))
         return length(custom_operator_by_id)
     end
 end

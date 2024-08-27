@@ -35,3 +35,9 @@ reduction_functions! = Function[
 ]
 
 custom_reduction_functions! = Function[]
+
+function loadStaticCustomOperations()
+    for kernel! in reducer.precompilable_custom_operators
+        push!(custom_reduction_functions!, kernel!)
+    end
+end

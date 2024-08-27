@@ -17,6 +17,7 @@ struct Operator
     in_type         :: Type
     out_type        :: Type
     id              :: Int32
+    kind            :: Int32
     symbol          :: Symbol
 end
 
@@ -51,7 +52,6 @@ metadata = Dict([
 
 # Debug:
 #    0: normal execution
-#    1: ready handshake between launcher and execution and exit execution (when reducer_ready = 2)
 # Reducer ready (runtime writes here):
 #    1: runtime is listening for pipeline configuration
 #    2: runtime got configuration, pipeline start
@@ -67,5 +67,5 @@ var_repository = Dict([
     :var_shape    => Var("input_var_shape", Int, [3]),
     :var_type     => Var("input_var_type", Int, []),
     :n_layers     => Var("number_of_layers"  , Int   , []),
-    :layer_config => Var("layer_config_table", Int   , [32, 7])
+    :layer_config => Var("layer_config_table", Int   , [32, 8])
 ])

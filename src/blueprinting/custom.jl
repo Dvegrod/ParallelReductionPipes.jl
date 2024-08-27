@@ -1,5 +1,7 @@
 using MacroTools
 
+# ADDING DINAMICALLY
+
 macro custom_reduction(body :: Expr, name::String)
 
     status = "Successful custom kernel construction"
@@ -30,7 +32,7 @@ macro custom_reduction(body :: Expr, name::String)
 
     draft = MacroTools.unblock(MacroTools.flatten(draft))
 
-    addCustomOperatorToBlueprints(name, Symbol(name))
+    addCustomOperatorToBlueprints(name, 2)
 
     open("temp.jl", "w") do file
         write(file, string(draft))
@@ -43,3 +45,15 @@ macro custom_reduction(body :: Expr, name::String)
     end
 end
 
+
+# ADDING STATICALLY
+
+precompilable_custom_operators = Function[]
+function addCustomReduction(reduction :: Function, name :: String)
+    # Register the operator
+    id = addCustomOperatorToBlueprints(name, 1)
+    # Save the function for the runtime
+    push!(precompilable_custom_operators, reduction)
+
+    return id
+end

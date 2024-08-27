@@ -1,13 +1,14 @@
 
 struct LocalLayer
-    operator_id ::Int
-    input_start ::Tuple
-    input_shape ::Tuple
-    output_start::Tuple
-    output_shape::Tuple
-    kernel_shape::Tuple
+    operator_id   ::Int
+    operator_kind :: Int
+    input_start   ::Tuple
+    input_shape   ::Tuple
+    output_start  ::Tuple
+    output_shape  ::Tuple
+    kernel_shape  ::Tuple
 
-    out_buffer :: Data.Array
+    out_buffer    :: Data.Array
 end
 
 struct ExecutionInstance

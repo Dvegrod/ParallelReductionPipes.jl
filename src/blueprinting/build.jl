@@ -38,7 +38,7 @@ function exportPipelineConfiguration(adios_engine :: ADIOS2.Engine,
 
     # Set layer info (linea, non branching)
     # LAYER ENTRY = 7 Integers (operator id, kerx, kery, kerz, outx, outy, outz)
-    layers = ones(Int, 32, 7)
+    layers = ones(Int, 32, 8)
     n_layers = 0
     for layer :: Layer in builder.layers
         n_layers += 1
@@ -46,6 +46,8 @@ function exportPipelineConfiguration(adios_engine :: ADIOS2.Engine,
 
         serializeShape(layer.kernel.dims, view(layers, n_layers, 2:4))
         serializeShape(layer.output_shape, view(layers, n_layers, 5:7))
+
+        layers[n_layers, 8] = layer.operator.kind
     end
 
     put!(adios_engine, var_dict[:n_layers], n_layers)

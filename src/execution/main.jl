@@ -70,9 +70,12 @@ end
 function execute_layer!(input :: Data.Array, layer :: LocalLayer)
 
     id = layer.operator_id
-    if id > 0
+    kind = layer.operator_kind
+    if kind == 0 # BUILT IN
         @parallel (1:layer.output_shape[1], 1:layer.output_shape[2], 1:layer.output_shape[3]) reduction_functions![layer.operator_id](input, layer.out_buffer)
-    else
+    elseif kind == 1 # CUSTOM STATIC
+        @parallel (1:layer.output_shape[1], 1:layer.output_shape[2], 1:layer.output_shape[3]) custom_reduction_functions![layer.operator_id](input, layer.out_buffer)
+    else    # CUSTOM DYNAMIC
         @parallel (1:layer.output_shape[1], 1:layer.output_shape[2], 1:layer.output_shape[3]) invokelatest(custom_reduction_functions![-1 * id], input, layer.out_buffer)
     end
 end
@@ -183,6 +186,8 @@ function main()
     # Initialization
     # MPI
     MPI.Init()
+
+    loadStaticCustomOperations()
 
     rank = MPI.Comm_rank(MPI.COMM_WORLD)
     size = MPI.Comm_size(MPI.COMM_WORLD)
