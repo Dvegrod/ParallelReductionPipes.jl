@@ -30,7 +30,7 @@ let
                 return custom_operator_by_id[operator_alias * -1]
             end
         elseif operator_alias isa Symbol
-            if operator_alias in operator_by_name.keys
+            if operator_alias in keys(operator_by_name)
                 return operator_by_name[operator_alias]
             elseif true # TODO
                 return custom_operator_by_name(operator_alias)
@@ -39,7 +39,7 @@ let
             end
         else
             operator_alias = Symbol(operator_alias)
-            if operator_alias in operator_by_name.keys
+            if operator_alias in keys(operator_by_name)
                 return operator_by_name[operator_alias]
             elseif true
                 return custom_operator_by_name(operator_alias)
