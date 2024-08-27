@@ -1,6 +1,7 @@
 module reducer
 
 using ADIOS2
+using MacroTools
 
 ALL::Int = -1
 

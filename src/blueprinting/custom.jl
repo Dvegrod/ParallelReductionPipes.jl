@@ -1,4 +1,3 @@
-using MacroTools
 
 # ADDING DINAMICALLY
 
@@ -51,7 +50,7 @@ end
 precompilable_custom_operators = Function[]
 function addCustomReduction(reduction :: Function, name :: String)
     # Register the operator
-    id = addCustomOperatorToBlueprints(name, 1)
+    id = addCustomOperatorToBlueprints(name, Int32(1))
     # Save the function for the runtime
     push!(precompilable_custom_operators, reduction)
 
