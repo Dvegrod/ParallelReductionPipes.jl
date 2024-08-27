@@ -86,7 +86,7 @@
             @test vals[:uses_config] == 0
             @test vals[:var_type] == 0
             @test vals[:n_layers] == 1
-            @test vals[:layer_config][1,:] == [1, 10, 10, 1, 10, 10, 10]
+            @test vals[:layer_config][1,:] == [1, 10, 10, 1, 10, 10, 10, 0]
 
             close(e)
             finalize(a)
