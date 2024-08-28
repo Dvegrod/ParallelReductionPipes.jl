@@ -5,3 +5,5 @@ function kernel(dims :: Union{AbstractArray, NTuple}, trim :: Bool = false) :: K
         trim
     )
 end
+
+window = kernel

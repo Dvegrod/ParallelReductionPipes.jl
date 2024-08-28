@@ -29,6 +29,6 @@ struct CPUBackend <: AbstractBackend end
 
 main(backend :: Type{<: AbstractBackend}) = error("Invalid, or disabled backend, check dependencies ($backend)")
 
-export Pipe,newPipe,buildPipe,reduction,kernel,@custom_reduction_mini,@custom_reduction,addCustomReduction
+export Pipe,newPipe,buildPipe,reduction,window,@custom_reduction_mini,@custom_reduction,addCustomReduction,getOutputStep
 
 end
