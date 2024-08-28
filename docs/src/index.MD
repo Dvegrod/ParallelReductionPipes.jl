@@ -8,5 +8,5 @@ The package `ParallelReductionPipes` provides ...
 This project has initially been developed as an internship at the Swiss National Supercomputing Centre by Daniel Sergio Vega Rodriguez, under supervision of Dr. Samuel Omlin and co-supervision of Dr. Jean Favre.
 
 The contributors to this repository have been so far:
-- Daniel Sergio Vega Rodriguez ([@Dvegrod](https://github.com/Dvegrod)), Swiss National Supercomputing Centre (CSCS), ETH Zurich
+- Daniel Sergio Vega Rodriguez ([@Dvegrod](https://github.com/Dvegrod)), Swiss National Supercomputing Centre (CSCS), ETH Zurich | Università della Svizzera italiana (USI)
 - Dr. Samuel Omlin ([@omlins](https://github.com/omlins)), Swiss National Supercomputing Centre (CSCS), ETH Zurich
