@@ -36,6 +36,8 @@ struct PipelineBuilder
     process_space_size :: Int  # MPI
 end
 
+Pipe = PipelineBuilder
+
 struct Var
     name :: String
     type :: Type
