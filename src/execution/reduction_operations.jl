@@ -20,8 +20,6 @@
 end
 
 
-module CCustom
-end
 
 
 function loadCustomOperations(path :: String)

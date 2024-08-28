@@ -52,7 +52,7 @@ function poll_inquire(connection :: AbstractConnection, var_name :: String)
 
     (a,io,engine) = connect(connection)
 
-    @show var_name
+    @show var_name, connection.timeout
 
     y = inquire_variable(io, var_name)
 

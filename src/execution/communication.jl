@@ -19,7 +19,7 @@ function connect(connection :: MPIConnection)
     adios = adios_init_mpi(connection.comm)
     comm_io = declare_io(adios, side * "IO")
     comm_engine = open(comm_io, side, mode_readRandomAccess)
-    @info "CONNECTION: connected to $side $(stacktrace())"
+    @debug "CONNECTION: connected to $side"
     return (adios,comm_io,comm_engine)
 end
 
@@ -31,7 +31,7 @@ function setup(connection :: MPIConnection)
     adios = adios_init_mpi(connection.comm)
     comm_io = declare_io(adios, side * "IOw")
     comm_engine = open(comm_io, side, mode_write)
-    @info "SETUP: connected to $side"
+    @debug "SETUP: connected to $side"
     return (adios,comm_io,comm_engine)
 end
 
@@ -55,25 +55,9 @@ end
 function listen(connection :: MPIConnection, last_id :: Int)::Bool
     bool = false
 
-    # if MPI.Comm_rank(connection.comm) == 0
-    #     for _ in 1:TRIALS
-    #         config_ready = ParallelReductionPipes._get(connection, :ready)
-
-    #         @show config_ready
-
-    #         if config_ready !== nothing && config_ready > last_id
-    #             bool = true
-    #             break
-    #         end
-
-    #         @warn "LISTENING"
-    #         sleep(1)
-    #     end
-    # end
-    # bool = MPI.Bcast(bool, 0, connection.comm)
     config_ready = ParallelReductionPipes._get(connection, :ready)
 
-    @show config_ready
+    @debug config_ready
 
     if config_ready !== nothing && config_ready > last_id
         bool = true

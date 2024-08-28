@@ -1,7 +1,9 @@
 
 # ADDING DINAMICALLY
+custom = nothing
+custom_file_location = "PRP_temp.jl"
 
-macro custom_reduction(body :: Expr, name::String)
+macro custom_reduction_mini(body :: Expr, name::String)
 
     status = "Successful custom kernel construction"
 
@@ -31,9 +33,37 @@ macro custom_reduction(body :: Expr, name::String)
 
     draft = MacroTools.unblock(MacroTools.flatten(draft))
 
-    addCustomOperatorToBlueprints(name, 2)
+    addCustomOperatorToBlueprints(name, Int32(2))
 
-    open("temp.jl", "w") do file
+    open(custom_file_location, "w") do file
+        write(file, string(draft))
+    end
+    #declare_and_set(connection.io_comm_write, connection.engine_comm_write, metadata[:custom], "./temp.jl")
+
+    return quote
+        @info $status
+    end
+end
+
+
+macro custom_reduction(body :: Expr, name::String)
+
+    status = "Successful custom kernel construction"
+
+    draft = quote
+        module Custom
+        using ParallelStencil
+        @init_parallel_stencil(Threads, Float64, 3)
+
+        $body
+        end
+    end
+
+    draft = MacroTools.unblock(MacroTools.flatten(draft))
+
+    addCustomOperatorToBlueprints(name, Int32(2))
+
+    open(custom_file_location, "w") do file
         write(file, string(draft))
     end
 

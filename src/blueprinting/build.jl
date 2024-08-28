@@ -78,14 +78,13 @@ end
 
 
 
-function build(builder::PipelineBuilder, custom)
+function build(builder::PipelineBuilder, connection_location="connection")
 
-    path = "."
 
-    c = Connection(path, false, 30)
+    c = Connection(connection_location, false, 30)
 
-    ready = _get(c, :exec_ready)
-    @info "runtime detected ready = $ready"
+    #ready = _get(c, :exec_ready)
+    #@info "runtime detected ready = $ready"
 
     aw,iw,ew = setup(c)
     defineMetadata(iw)
@@ -94,7 +93,7 @@ function build(builder::PipelineBuilder, custom)
     exportPipelineConfiguration(ew, vars, builder)
 
     if custom !== nothing
-        _set(iw, ew, metadata[:custom], custom)
+        _set(iw, ew, metadata[:custom], custom_file_location)
     end
 
     _set(iw, ew, metadata[:ready], 1)

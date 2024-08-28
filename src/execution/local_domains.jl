@@ -21,11 +21,11 @@ function localChunkSelection(sh :: Tuple, rank :: Int, dims :: Union{Tuple, Vect
 
     pcoords = dim_coord(rank, dims)
 
-    @show pcoords
+    @debug pcoords
 
     dcoords = Tuple(slicer1D.(pcoords, sh, dims))
 
-    @show dcoords
+    @debug dcoords
 
     tdcoords = transpose(dcoords)
 
@@ -37,7 +37,7 @@ function calculateShape(layer_config :: Array{Int}, input_shape :: Tuple, n_laye
     local_layers = LocalLayer[]
 
     global_output_shape = Tuple(layer_config[n_layers, 5:7])
-    @show layer_config
+    @debug layer_config
 
     # Segment the final output given the processes
     local_output_start, local_output_shape, _ = localChunkSelection(global_output_shape, rank, dims)
@@ -68,7 +68,7 @@ function calculateShape(layer_config :: Array{Int}, input_shape :: Tuple, n_laye
             Data.Array(undef, local_output_shape...)
         ))
 
-        @show local_output_start, local_output_shape
+        @debug local_output_start, local_output_shape
         local_output_shape = local_input_shape
         local_output_start = local_input_start
     end
@@ -141,4 +141,11 @@ function transpose(tuple::NTuple{n,<:NTuple{m,<:Any}}) where {n,m}
         end,
         Val{m}()
     )
+end
+
+function calculateDims(comm_size :: Int, input_shape :: Int)
+
+    constraint = [dim > 1 ? 0 : 1 for dim in input_shape]
+
+    return MPI.Dims_create(comm_size, constraint)
 end

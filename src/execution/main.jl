@@ -38,7 +38,7 @@ function get_input(io :: ADIOS2.AIO, engine::ADIOS2.Engine,
         throw(e)
     end
 
-    @show start,size
+    @debug start,size
     set_selection(y, collapseDims(start, size), collapseDims(size))
 
     array = Data.Array(undef, collapseDims(size)...)
@@ -47,7 +47,7 @@ function get_input(io :: ADIOS2.AIO, engine::ADIOS2.Engine,
 
     perform_gets(engine)
 
-    @show sum(array)
+    @debug sum(array)
 
     # Reshape will expand dims if needed
     return reshape(array, size)
@@ -84,7 +84,7 @@ end
 function submit_output(io::ADIOS2.AIO, engine::ADIOS2.Engine, input::LocalLayer, global_shape)
 
     # TODO NOT REDEFINE
-    @show collapseDims(input.output_start, input.output_shape), collapseDims(input.output_shape)
+    @debug collapseDims(input.output_start, input.output_shape), collapseDims(input.output_shape)
 
     # NOTE THIS WILL TRIGGER AN ERROR ON VERY SMALL DOMAINS
     define_variable(io, "out", Float64, collapseDims(global_shape), collapseDims(input.output_start, input.output_shape), collapseDims(input.output_shape))
@@ -96,7 +96,7 @@ function submit_output(io::ADIOS2.AIO, engine::ADIOS2.Engine, input::LocalLayer,
         throw(e)
     end
 
-    @show input.output_start, input.output_shape, global_shape
+    @debug input.output_start, input.output_shape, global_shape
 
     put!(engine, y, input.out_buffer)
     perform_puts!(engine)
@@ -114,7 +114,7 @@ function submit_Loutput(io::ADIOS2.AIO, engine::ADIOS2.Engine, input::LocalLayer
         throw(e)
     end
 
-    @show input.output_start, input.output_shape, global_shape
+    @debug input.output_start, input.output_shape, global_shape
 
     put!(engine, y, input.out_buffer)
     perform_puts!(engine)
@@ -135,6 +135,7 @@ function reduction_execution(e :: ExecutionInstance)
 
         submit_Loutput(e.output_IO, e.output_engine, LocalLayer(
             1,
+            0,
             (3,),
             (3,),
             input_start(e),
@@ -163,9 +164,11 @@ end
 
 function includeCustoms(conn)
     c = MPIConnection(conn.location, conn.side, 1, conn.comm)
-    path = ParallelReductionPipes._get(conn, :custom)
+    path = ParallelReductionPipes._get(c, :custom)
+    path = isabspath(path) ? path : joinpath(pwd(), path)
+
     if path isa Nothing
-        @info "No customs detected"
+        @debug "No customs detected"
         return
     else
         loadCustomOperations(path)
@@ -182,7 +185,7 @@ end
 #      2. Output data
 
 function main(connection_location :: String)
-    @info "ON"
+    @debug "ON"
     # Initialization
     # MPI
     MPI.Init()
@@ -192,9 +195,8 @@ function main(connection_location :: String)
     rank = MPI.Comm_rank(MPI.COMM_WORLD)
     size = MPI.Comm_size(MPI.COMM_WORLD)
 
-    dims = MPI.Dims_create(size, [0,0,1])
 
-    @info "ON"
+    @debug "ON"
     # Pipeline adios
 
     # Flag parse
@@ -204,18 +206,16 @@ function main(connection_location :: String)
             flags[i] = !flags[i]
         end
     end
+    # The default is to have the connection located at ./connection
+    connection_location = connection_location != "" ? connection_location : "connection"
 
-    connection = MPIConnection(connection_location != "" ? connection_location : "connection", true, 10000, MPI.COMM_WORLD)
+    connection = MPIConnection(connection_location, true, 10000, MPI.COMM_WORLD)
 
-    # # Logger
-    # if flags["--log"]
-    #     logfile = open("./reducer-logs.log", mode_write)
-    # end
 
     last_id = 0
     for _ in 1:1
 
-        @info "ON LOOP"
+        @debug "ON LOOP"
         # LISTEN FOR CONFIGURATION ARRIVAL
         ready(connection, 1)
         if !listen(connection, last_id)
@@ -224,14 +224,14 @@ function main(connection_location :: String)
         last_id = ParallelReductionPipes._get(connection, :ready)
 
         # Get pipeline config
-        @info "ON CONNECT"
+        @debug "ON CONNECT"
         ar,ir,er = connect(connection)
         pipeline_vars = ParallelReductionPipes.inquirePipelineConfigurationStructure(ir)
         pipeline_config = ParallelReductionPipes.getPipelineConfigurationStructure(er, pipeline_vars)
 
         # Check if there are custom kernels
         includeCustoms(connection)
-        @show custom_reduction_functions!
+        @debug custom_reduction_functions!
 
         ready(connection, 2)
 
@@ -253,7 +253,7 @@ function main(connection_location :: String)
 
         end
 
-        @info "ON OUTPUT"
+        @debug "ON OUTPUT"
         # ADIOS INIT OUTPUT STREAM
         output_io = declare_io(adios, "OUTPUT_IO")
 
@@ -261,12 +261,16 @@ function main(connection_location :: String)
 
         @warn "Reached pipeline beginning"
 
+
+        dims = calculateDims(size, Tuple(pipeline_config[:var_shape]))
+        @show dims
+
         # Calculate local pipeline shapes
         layers = calculateShape(pipeline_config[:layer_config], Tuple(pipeline_config[:var_shape]), pipeline_config[:n_layers], rank, Tuple(dims))
 
-        #@show layers
+        #@debug layers
 
-        @info "ON EXEC"
+        @debug "ON EXEC"
         exec_instance = ExecutionInstance(
             last_id,
             rank,
