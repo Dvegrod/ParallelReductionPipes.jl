@@ -21,6 +21,7 @@ include("blueprinting/operators.jl")
 include("blueprinting/custom.jl")
 include("blueprinting/reduction.jl")
 include("blueprinting/build.jl")
+include("blueprinting/connection.jl")
 
 
 abstract type AbstractBackend end

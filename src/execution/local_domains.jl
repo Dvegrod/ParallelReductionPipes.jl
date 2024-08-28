@@ -143,7 +143,7 @@ function transpose(tuple::NTuple{n,<:NTuple{m,<:Any}}) where {n,m}
     )
 end
 
-function calculateDims(comm_size :: Int, input_shape)
+function calculateDims(comm_size :: Int, input_shape :: Int)
 
     constraint = [dim > 1 ? 0 : 1 for dim in input_shape]
 
