@@ -1,6 +1,6 @@
 name = "ParallelReductionPipes"
 uuid = "071b913d-17cb-47fe-ac3b-24d020533912"
-authors = ["Dvegrod <dvegrodu@gmail.com>"]
+authors = ["Dvegrod <dvegrodu@gmail.com>, Samuel Omlin <samuel.omlin@cscs.ch>, and contributors"]
 version = "0.1.0"
 
 [deps]
