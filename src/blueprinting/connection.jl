@@ -18,8 +18,6 @@ function getOutputStep(step_number :: Int, connection_location :: String = "conn
 
     buf = Array{Float64}(undef, shape(y)...)
 
-    @show shape(y), sum(buf)
-
     get(engine, y, buf)
 
     perform_gets(engine)
