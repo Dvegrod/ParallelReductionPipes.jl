@@ -1,3 +1,6 @@
+"""
+  The reducer runtime, CPU backend.
+"""
 module ParallelReductionPipes_MPIExt
 #ParallelReductionPipes.MPIConnection = MPIConnection
 

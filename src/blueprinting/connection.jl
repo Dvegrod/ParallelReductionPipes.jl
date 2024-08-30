@@ -1,6 +1,15 @@
 
 
+"""
+This function is used to obtain the reduced data from the runtime. Assuming it has one or more steps available to read. It fails otherwise.
 
+# Arguments
+ - `step_number` which step to read from the output stream
+ - `connection_location` the path to the directory where the control channel is, by default "./connection"
+
+# Returns
+ An array with the reduced data.
+"""
 function getOutputStep(step_number :: Int, connection_location :: String = "connection") :: Array
 
     adios = adios_init_serial()

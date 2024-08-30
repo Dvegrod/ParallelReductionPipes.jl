@@ -1,18 +1,33 @@
 
+# CONNECTION
 
 side_a = "reducer-r.bp"
 side_b = "reducer-l.bp"
 
 connectionGetSide(b :: Bool) = b ? side_b : side_a
 
+"""
+  A connection object is used to create a duplex communication channel
+  between the runtime and the pipe-builder/control process
+
+  A connection has two sides, each side reads and writes from opposite streams.
+
+  Make sure to not have a connection with 2 writers on the same side.
+"""
 abstract type AbstractConnection end
 
+"""
+  Serial connection.
+"""
 struct Connection <: AbstractConnection
     location :: String
     side     :: Bool
     timeout  :: Int
 end
 
+"""
+  Used to check if a adios stream file has been already created, if its not the case the function waits
+"""
 function wait_for_existence(filename :: String, timeout :: Int)
     i = 1
     while !isdir(filename) && i <= timeout
@@ -26,6 +41,9 @@ function wait_for_existence(filename :: String, timeout :: Int)
     end
 end
 
+"""
+  Given a connection, this method will open the READING stream
+"""
 function connect(connection :: Connection)
 
     side = joinpath(connection.location, connectionGetSide(connection.side))
@@ -38,6 +56,11 @@ function connect(connection :: Connection)
     return (adios,comm_io,comm_engine)
 end
 
+"""
+  Given a connection, this method will open the WRITING stream.
+
+  Warning: previous contents on the writing stream might be overwritten.
+"""
 function setup(connection :: Connection)
 
     side = joinpath(connection.location, connectionGetSide(!connection.side))
@@ -48,6 +71,9 @@ function setup(connection :: Connection)
     return (adios,comm_io,comm_engine)
 end
 
+"""
+  Given a connection, inquire a variable, in case of absence, wait for it
+"""
 function poll_inquire(connection :: AbstractConnection, var_name :: String)
 
     (a,io,engine) = connect(connection)
@@ -67,23 +93,13 @@ function poll_inquire(connection :: AbstractConnection, var_name :: String)
     return a,io,engine,y
 end
 
+# OTHER THINGS
 
-# macro check_for_val_w_timeout(func :: Expr, val :: Any, time_sec :: Int)
+"""
+  Defines the control flags in the control channel
 
-#     f = eval(func)
-
-#     return quote
-# 	      for i in 1:$time_sec
-#             r = f()
-#             if r !== nothing && r == $val
-#                 return true
-#             end
-#         end
-#         return false
-#     end
-# end
-
-# Defines the variables used to comunicate status
+  Requires a WRITE stream IO
+"""
 function defineMetadata(adios_io::ADIOS2.AIO)
     #TODO
     for (_, var) in metadata
@@ -99,7 +115,12 @@ function defineMetadata(adios_io::ADIOS2.AIO)
         define_variable(adios_io, var.name, var.type, sh, st, cn)
     end
 end
-# Defines the variables used to comunicate a pipeline configuration
+
+"""
+  Defines the pipeline serialization variables in the control channel
+
+  Requires a WRITE stream IO
+"""
 function definePipelineConfigurationStructure(adios_io::ADIOS2.AIO)
     #TODO
     for (_, var) in var_repository
@@ -117,7 +138,9 @@ function definePipelineConfigurationStructure(adios_io::ADIOS2.AIO)
 end
 
 
-# Inquires the variables used to comunicate a pipeline configuration
+"""
+  Inquires the pipeline serialization variables by reading the control channel
+"""
 function inquirePipelineConfigurationStructure(adios_io::ADIOS2.AIO)::Dict{Symbol,ADIOS2.Variable}
 
     result = Dict{Symbol,ADIOS2.Variable}()
@@ -135,7 +158,12 @@ function inquirePipelineConfigurationStructure(adios_io::ADIOS2.AIO)::Dict{Symbo
 end
 
 
-# Gets the variables used to comunicate a pipeline configuration
+
+"""
+ Reads a serialized pipe from the control channel
+
+ Requires a READING ADIOS2 IO and ENGINE
+"""
 function getPipelineConfigurationStructure(adios_engine::ADIOS2.Engine, vars::Dict{Symbol,ADIOS2.Variable})::Dict{Symbol,Any}
 
     result = Dict{Symbol,Any}()
@@ -158,12 +186,15 @@ function getPipelineConfigurationStructure(adios_engine::ADIOS2.Engine, vars::Di
 end
 
 
+"""
+  Used to get a specific variable from the control flags given a connection
+"""
 function _get(connection::AbstractConnection, key::Symbol)::Any
 
-    @show connection,key
+    @show connection, key
     if key in keys(metadata)
 
-        a,io,engine,y = poll_inquire(connection, metadata[key].name)
+        a, io, engine, y = poll_inquire(connection, metadata[key].name)
 
         if isnothing(y)
             #e = ArgumentError("Invalid key $key, value is not available on the specified IO")
@@ -173,7 +204,7 @@ function _get(connection::AbstractConnection, key::Symbol)::Any
 
         sh = shape(y)
         if length(sh) > 0
-            reference = Array{type(y), length(sh)}(undef, sh...)
+            reference = Array{type(y),length(sh)}(undef, sh...)
         else
             reference = Ref{type(y)}()
         end
@@ -194,6 +225,12 @@ function _get(connection::AbstractConnection, key::Symbol)::Any
     end
 end
 
+
+"""
+  Used to set a specific variable from the control flags given a connection
+
+  WARNING: this will overwrite the entire writing stream on the control plane
+"""
 function _set(connection :: AbstractConnection, key::Symbol, value::Any)
 
 
@@ -224,8 +261,11 @@ function _set(connection :: AbstractConnection, key::Symbol, value::Any)
     close(engine)
 end
 
-# WARNING THE FIRST OVERWRITES THE ENTIRE FILE THIS ONE DOES NOT
-function _set(io, ADIOS2::AIO, engine :: ADIOS2.Engine, key::Symbol, value::Any)
+
+"""
+  Used to set a specific variable from the control flags given a READING ADIOS2 IO and ENGINE
+"""
+function _set(io, ADIOS2::AIO, engine::ADIOS2.Engine, key::Symbol, value::Any)
 
     if key in keys(metadata)
         y = inquire_variable(io, metadata[key].name)
@@ -251,25 +291,34 @@ function _set(io, ADIOS2::AIO, engine :: ADIOS2.Engine, key::Symbol, value::Any)
 
 end
 
-function _set(io :: ADIOS2.AIO, engine :: ADIOS2.Engine, var :: Var, value::Any)
+"""
+  Used to set a specific variable (from metadata or pipe serialization) given a READING ADIOS2 IO and ENGINE
+"""
+function _set(io::ADIOS2.AIO, engine::ADIOS2.Engine, var::Var, value::Any)
 
-        y = inquire_variable(io, var.name)
+    y = inquire_variable(io, var.name)
 
-        if isnothing(y)
-            e = ArgumentError("Invalid key $key, value is not available on the specified IO")
-            throw(e)
-        end
+    if isnothing(y)
+        e = ArgumentError("Invalid key $key, value is not available on the specified IO")
+        throw(e)
+    end
 
-        put!(engine, y, value)
+    put!(engine, y, value)
 
-        perform_puts!(engine)
+    perform_puts!(engine)
 
 
 end
 
-function declare_and_set(connection :: AbstractConnection, var_data::Var, value::Any)
 
-    a,io,engine = setup(connection)
+"""
+  Used to declare set an unexistent specific variable (from metadata or pipe serialization) given a connection
+
+  WARNING: this will overwrite the entire writing stream on the control plane
+"""
+function declare_and_set(connection::AbstractConnection, var_data::Var, value::Any)
+
+    a, io, engine = setup(connection)
 
     y = inquire_variable(io, var_data.name)
 
@@ -298,6 +347,9 @@ function declare_and_set(connection :: AbstractConnection, var_data::Var, value:
 end
 
 
+"""
+  Used to declare set an unexistent specific variable (from metadata or pipe serialization) given a READING ADIOS2 IO and ENGINE
+"""
 function declare_and_set(io :: ADIOS2.AIO, engine :: ADIOS2.Engine, var_data::Var, value::Any)
 
 

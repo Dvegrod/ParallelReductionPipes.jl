@@ -1,6 +1,8 @@
 
 
-
+"""
+  Calculates the output shape of applying a window/kernel to an input shape.
+"""
 function sizeTransform(input_shape :: Vector{Int}, kernel :: Kernel) :: Tuple{Vector{Int},Vector{Int}}
     if length(kernel.dims) != length(input_shape)
         throw(DimensionMismatch("The kernel and the input have different dimensions: K: $(kernel.dims) IN: $(input_shape)"))
@@ -28,15 +30,20 @@ end
 
 
 """
-  Designs a data reduction layer to be added to a pipeline builder
+Designs a data reduction layer to be added to a pipeline builder
 
-  This layer has:
-       - A operator: specifies which reduction operation to use
-       - A kernel: specifies how many cells in each direction collapse into one
+This layer has:
+ - A operator: specifies which reduction operation to use
+ - A kernel/window: specifies how many cells in each direction collapse into one
 
-  An error will occur during the building process if the layer is incompatible either by (usually):
-       - Size mismatch
-       - Type mismatch
+ An error will occur during the building process if the layer is incompatible either by (usually):
+ - Size mismatch
+ - Type mismatch
+
+# Arguments
+ - `pipeline` the pipe where the layer is going to take the input
+ - `kernel` the window of the layer
+ - `operator` the identifier (ID, Symbol or name) of a reduction operator of the layer (e.g. 1, :average, "average" all correspond to the same operator)
 """
 function reduction(pipeline :: PipelineBuilder, kernel :: Union{Tuple{Int}, Kernel}, operator :: Union{Symbol,String,Int})
     # Get input size

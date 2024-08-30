@@ -7,11 +7,11 @@ CurrentModule = ParallelReductionPipes
 This is the official API reference of `ParallelReductionPipes`. Note that it can also be queried interactively from the [Julia REPL] using the [help mode](https://docs.julialang.org/en/v1/stdlib/REPL/#Help-mode):
 ```julia-repl
 julia> using ParallelReductionPipes
-julia>?
+julia> ?
 help?> ParallelReductionPipes
 ```
 
-## Functions -- additional to standard `AbstractArray` functionality
+## Functions
 #### Index
 ```@index
 Modules = [PerfTest]

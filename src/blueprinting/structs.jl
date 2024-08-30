@@ -1,4 +1,5 @@
 
+"""Saves the information about a pipe input that is the ADIOS2 parameters"""
 struct Input
     var_name        :: AbstractString
     engine_name     :: AbstractString
@@ -7,11 +8,13 @@ struct Input
     var_type        :: Type
 end
 
+"""As known as window, this saves window dimensions"""
 struct Kernel
     dims            :: Vector{Int}
     trim            :: Bool  # Y/N? Trims border areas that do not fit an entire kernel space TODO
 end
 
+"""Saves the registration of an operator (just its I/O not the actual function)"""
 struct Operator
     name            :: String
     in_type         :: Type
@@ -21,6 +24,7 @@ struct Operator
     symbol          :: Symbol
 end
 
+"""Combines a operator and a kernel to make a layer, also registers its output properties"""
 struct Layer
     kernel             :: Kernel
     operator           :: Operator
@@ -29,7 +33,7 @@ struct Layer
 end
 _shape(layer::Layer) = Tuple(layer.output_shape)
 
-
+"""This is a blueprint for a pipe, it can be launched to the runtime"""
 struct PipelineBuilder
     input              :: Input
     layers             :: Vector{Layer}
@@ -38,12 +42,14 @@ end
 
 Pipe = PipelineBuilder
 
+"""A var field used to define valid attributes to be sent through the control channel"""
 struct Var
     name :: String
     type :: Type
     shape:: Vector{Int}
 end
 
+"""Control channel: control flags"""
 metadata = Dict([
     :ready      => Var("config_ready", Int, []),
     :exec_ready => Var("reducer_ready", Int, []),
@@ -60,7 +66,7 @@ metadata = Dict([
 # Config ready (launcher writes here):
 #    1: launcher has posted the pipeline configuration
 
-
+"""Control channel: pipe serialization"""
 var_repository = Dict([
     :engine       => Var("input_engine", String, []),
     :var_name     => Var("input_var_name", String, []),

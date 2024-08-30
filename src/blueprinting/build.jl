@@ -78,6 +78,13 @@ end
 
 
 
+"""
+  Deploys a pipe into the runtime, where it will be executed
+
+# Arguments:
+ - `builder` : the pipe that is going to be deployed
+ - `connection_location` : the path of the directory where the communication channel is. By default "./connection".
+"""
 function build(builder::PipelineBuilder, connection_location="connection")
 
 
