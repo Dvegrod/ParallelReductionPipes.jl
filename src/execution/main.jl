@@ -1,13 +1,12 @@
 
 
-flags = Dict{String,Bool}([
-   "--log" => true
-])
 
 global logfile = undef
 
-# Used to trim start or size tuples in case the space does not use all dimensions
-# (sometimes it is not needed to do this but the adios API does need it often for proper transfer)
+"""
+  Works like an array squeeze function but for tuples (deletes unused dimensions)
+ (sometimes it is not needed to do this but the adios API does need it often for proper transfer)
+"""
 function collapseDims(shape :: Tuple)
     tmp = Int[]
     for i in shape
@@ -18,6 +17,13 @@ function collapseDims(shape :: Tuple)
     return Tuple(tmp)
 end
 
+"""
+  Works like an array squeeze function but for tuples (deletes unused dimensions)
+
+  The particularity here is that unused dims on the second tuple will be used to delete dimensions on the first.
+
+  e.g ((3,2,1), (100,100,1)) -> (3,2)
+"""
 function collapseDims(start :: Tuple, shape :: Tuple)
     tmp = Int[]
     for i in 1:3
@@ -28,6 +34,9 @@ function collapseDims(start :: Tuple, shape :: Tuple)
     return Tuple(tmp)
 end
 
+"""
+  Used to access the input ADIOS2 stream where the data from the supplier is obtained to be reduced.
+"""
 function get_input(io :: ADIOS2.AIO, engine::ADIOS2.Engine,
                    var_name :: String, start :: Tuple, size :: Tuple) :: Data.Array
 
@@ -53,20 +62,11 @@ function get_input(io :: ADIOS2.AIO, engine::ADIOS2.Engine,
     return reshape(array, size)
 end
 
-function reduce_dim(in :: Tuple) :: Tuple
 
-    t = Int[]
-    for i in in
-        if i > 1
-            push!(t, i)
-        else
-            # push!(t, 1)
-        end
-    end
-
-    return Tuple(t)
-end
-
+"""
+  This routine is used to properly invoke the execution of a reduction layer. Depending on the kind the invocation changes.
+  It is important to note that for dynamic custom operations a `invokelatest` is required, which may slow down the function call a bit.
+"""
 function execute_layer!(input :: Data.Array, layer :: LocalLayer)
 
     id = layer.operator_id
@@ -80,7 +80,9 @@ function execute_layer!(input :: Data.Array, layer :: LocalLayer)
     end
 end
 
-
+"""
+  This routine publishes the output of a pipe in the corresponding ADIOS2 stream
+"""
 function submit_output(io::ADIOS2.AIO, engine::ADIOS2.Engine, input::LocalLayer, global_shape)
 
     # TODO NOT REDEFINE
@@ -103,24 +105,9 @@ function submit_output(io::ADIOS2.AIO, engine::ADIOS2.Engine, input::LocalLayer,
 end
 
 
-function submit_Loutput(io::ADIOS2.AIO, engine::ADIOS2.Engine, input::LocalLayer, global_shape)
-
-    define_variable(io, "L", Float64, global_shape, input.output_start, input.output_shape)
-
-    y = inquire_variable(io, "L")
-
-    if isnothing(y)
-        e = ArgumentError("Out var has not been defined yet")
-        throw(e)
-    end
-
-    @debug input.output_start, input.output_shape, global_shape
-
-    put!(engine, y, input.out_buffer)
-    perform_puts!(engine)
-end
-
-
+"""
+  This routine carries the execution of a pipe. It contains a loop that iterates thorugh input steps and computes the reduction of them by applying the layers sequentially.
+"""
 function reduction_execution(e :: ExecutionInstance)
     # STEP LOOP
     while begin_step(e.input_engine) == step_status_ok
@@ -133,16 +120,6 @@ function reduction_execution(e :: ExecutionInstance)
                            input_start(e), input_shape(e))
 
 
-        submit_Loutput(e.output_IO, e.output_engine, LocalLayer(
-            1,
-            0,
-            (3,),
-            (3,),
-            input_start(e),
-            input_shape(e),
-            (3,),
-            output
-        ), (1000,1000,1))
         # PROCESS CHUNK
         for i in 1:e.pipeline_config[:n_layers]
             execute_layer!(i == 1 ? output : e.localized_layers[i - 1].out_buffer, e.localized_layers[i])
@@ -162,6 +139,9 @@ function cleanup_instance(e :: ExecutionInstance)
     GC.gc()
 end
 
+"""
+  Used to obtain the path to dynamic custom operations. Those will then be added into the register to be used in pipes.
+"""
 function includeCustoms(conn)
     c = MPIConnection(conn.location, conn.side, 1, conn.comm)
     path = ParallelReductionPipes._get(c, :custom)
@@ -183,9 +163,11 @@ end
 #   B. DATA PLANE (BP5 or SST)
 #      1. Input data
 #      2. Output data
-
+"""
+  The main routine of the runtime, which incorporates a loop that
+  processes pipes.
+"""
 function main(connection_location :: String)
-    @debug "ON"
     # Initialization
     # MPI
     MPI.Init()
@@ -196,7 +178,6 @@ function main(connection_location :: String)
     size = MPI.Comm_size(MPI.COMM_WORLD)
 
 
-    @debug "ON"
     # Pipeline adios
 
     # Flag parse

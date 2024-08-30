@@ -1,5 +1,7 @@
 
-#TODO : change to agnostic array
+"""
+  Average reduction kernel, the only reduction kernel operation included by default. May serve as an example for future additions and custom operators.
+"""
 @parallel_indices (ix, iy, iz) inbounds = true function reduction_avg!(Big::Data.Array, Small::Data.Array)
     factor = div.(size(Big), size(Small))
     remdr = rem.(size(Big), size(Small))
@@ -21,7 +23,9 @@ end
 
 
 
-
+"""
+  Used to include and register a custom operation implemented in the file specified by `path`
+"""
 function loadCustomOperations(path :: String)
     include(path)
     push!(custom_reduction_functions!, Custom.kernel!)
@@ -34,6 +38,9 @@ reduction_functions! = Function[
 
 custom_reduction_functions! = Function[]
 
+"""
+  Exports the static operators saved in the corresponding list into the register in order to be usable
+"""
 function loadStaticCustomOperations()
     for kernel! in ParallelReductionPipes.precompilable_custom_operators
         push!(custom_reduction_functions!, kernel!)

@@ -1,7 +1,9 @@
 
 
 # Code related to the actual execution of the pipeline
-
+"""
+  MPI adapted connection, includes the MPI communicator
+"""
 struct MPIConnection <: ParallelReductionPipes.AbstractConnection
     location :: String
     side     :: Bool
@@ -10,7 +12,10 @@ struct MPIConnection <: ParallelReductionPipes.AbstractConnection
 end
 
 
-function connect(connection :: MPIConnection)
+"""
+  Given an MPI connection, this method will open the READING stream
+"""
+function connect(connection::MPIConnection)
 
     side = joinpath(connection.location, ParallelReductionPipes.connectionGetSide(connection.side))
 
@@ -20,11 +25,16 @@ function connect(connection :: MPIConnection)
     comm_io = declare_io(adios, side * "IO")
     comm_engine = open(comm_io, side, mode_readRandomAccess)
     @debug "CONNECTION: connected to $side"
-    return (adios,comm_io,comm_engine)
+    return (adios, comm_io, comm_engine)
 end
 
 
-function setup(connection :: MPIConnection)
+"""
+  Given an MPI connection, this method will open the WRITING stream.
+
+  Warning: previous contents on the writing stream might be overwritten.
+"""
+function setup(connection::MPIConnection)
 
     side = joinpath(connection.location, ParallelReductionPipes.connectionGetSide(!connection.side))
 
@@ -35,8 +45,14 @@ function setup(connection :: MPIConnection)
     return (adios,comm_io,comm_engine)
 end
 
-TRIALS = 2
+"""
+  Used by the runtime to communicate its state using the ready variable.
 
+  The following values are used:
+      Unexistent : The runtime is not running or its being initialised
+      1 : The runtime is ready to receive a pipe
+      2 : The runtime has received a pipe and its beggining its execution
+"""
 function ready(connection :: MPIConnection, ready_val :: Int)
     if MPI.Comm_rank(connection.comm) == 0
         var = ParallelReductionPipes.metadata[:exec_ready]
@@ -46,12 +62,16 @@ function ready(connection :: MPIConnection, ready_val :: Int)
         else
             ParallelReductionPipes.declare_and_set(c, var, ready_val)
         end
-        @warn "READY $ready_val"
     end
     MPI.Barrier(connection.comm)
 end
 
 
+"""
+  Used by the runtime detect if a pipe has been submitted.
+
+  The ready value can be any positive number, when a pipe is submitted the number goes up, this is to prevent deploying the same pipe twice
+"""
 function listen(connection :: MPIConnection, last_id :: Int)::Bool
     bool = false
 
