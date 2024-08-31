@@ -80,15 +80,12 @@ function main()
     # Buffer setup
     buffer = Float64[0. for _ in 1:side_dim, _ in 1:side_dim]
 
-    @warn "Reached preadios"
     # Setup ADIOS
-    adios = adios_init_serial("examples/mandel/adios_config.xml")
+    adios = adios_init_serial("./adios_config.xml")
     io = declare_io(adios, "INPUT_IO")
-    @info "$(ENV["SCRATCH"])/sstfile"
-    engine = open(io, "$(ENV["SCRATCH"])/sstfile", mode_write)
+    engine = open(io, "./sstfile", mode_write)
 
 
-    @warn "Reached adios"
     # Declare var
     matrix = define_variable(io, "mandel", buffer)
 

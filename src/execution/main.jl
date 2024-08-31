@@ -163,6 +163,8 @@ end
 #   B. DATA PLANE (BP5 or SST)
 #      1. Input data
 #      2. Output data
+
+
 """
   The main routine of the runtime, which incorporates a loop that
   processes pipes.
@@ -194,7 +196,7 @@ function main(connection_location :: String)
 
 
     last_id = 0
-    for _ in 1:1
+    while true
 
         @debug "ON LOOP"
         # LISTEN FOR CONFIGURATION ARRIVAL
@@ -202,7 +204,15 @@ function main(connection_location :: String)
         if !listen(connection, last_id)
             error("Listen timeout, $TRIALS TODO DEPRECATED trials.")
         end
-        last_id = ParallelReductionPipes._get(connection, :ready)
+
+        new_id = ParallelReductionPipes._get(connection, :ready)
+        if new_id <= last_id
+            sleep(1)
+            @debug "No new pipes"
+            continue
+        else
+            last_id = new_id
+        end
 
         # Get pipeline config
         @debug "ON CONNECT"

@@ -76,6 +76,18 @@ end
 #     return bool
 # end
 
+"""
+  This is a mechanism to prevent the runtime from running the same pipe twice
+  each pipe submission will increase this number
+"""
+let
+    pipe_id_counter :: Int = 0
+
+    global function get_pipe_id() :: Int
+        pipe_id_counter += 1
+        return pipe_id_counter
+    end
+end
 
 
 """
@@ -103,7 +115,7 @@ function build(builder::PipelineBuilder, connection_location="connection")
         _set(iw, ew, metadata[:custom], custom_file_location)
     end
 
-    _set(iw, ew, metadata[:ready], 1)
+    _set(iw, ew, metadata[:ready], get_pipe_id())
 
     close(ew)
 end

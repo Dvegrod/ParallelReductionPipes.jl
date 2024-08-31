@@ -1,9 +1,5 @@
 # Examples
 
 ```@contents
-Pages = ["examples/multistep_generator.md"]
-```
-
-```@contents
-Pages = ["examples/memcopyCellArray3D_ParallelStencil.md"]
+Pages = ["examples/mandel.md"]
 ```
