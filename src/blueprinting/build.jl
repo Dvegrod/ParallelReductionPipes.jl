@@ -91,7 +91,7 @@ let
     ignoring the launcher
     """
     global function update_to_runtime_latest(c :: Connection)
-        c_inverse = Connection(c.connection_location, true, 1)
+        c_inverse = Connection(c.location, true, 1)
 
         r =_get(c_inverse, :ready)
         pipe_id_counter = r isa Nothing ? pipe_id_counter : r
