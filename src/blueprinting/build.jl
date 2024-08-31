@@ -76,10 +76,8 @@ end
 #     return bool
 # end
 
-"""
-  This is a mechanism to prevent the runtime from running the same pipe twice
-  each pipe submission will increase this number
-"""
+#  This is a mechanism to prevent the runtime from running the same pipe twice
+#  each pipe submission will increase this number
 let
     pipe_id_counter :: Int = 0
 
