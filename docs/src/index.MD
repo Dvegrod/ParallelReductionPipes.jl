@@ -16,3 +16,9 @@ This project has initially been developed as an internship at the Swiss National
 The contributors to this repository have been so far:
 - Daniel Sergio Vega Rodriguez ([@Dvegrod](https://github.com/Dvegrod)), Swiss National Supercomputing Centre (CSCS), ETH Zurich | Università della Svizzera italiana (USI)
 - Dr. Samuel Omlin ([@omlins](https://github.com/omlins)), Swiss National Supercomputing Centre (CSCS), ETH Zurich
+
+## Known limitations in this version:
+
+If the runtime is kept running for long it might run out of file descriptors, this issue can be solved by releasing them in the `Connection` related functions.
+
+As of now there cannot be a pipe with an ouput shape that has less elements than the amount of processes assigned to it.
