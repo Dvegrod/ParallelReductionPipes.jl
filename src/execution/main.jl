@@ -206,6 +206,7 @@ function main(connection_location :: String)
             sleep(1)
             continue
         end
+        last_id = _get(connection, :ready)
 
 
         # Get pipeline config
