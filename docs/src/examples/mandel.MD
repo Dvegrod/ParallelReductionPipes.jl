@@ -13,14 +13,16 @@ The generator is shown below:
 Main.mdinclude(joinpath(Main.EXAMPLEROOT, "mandel", "multistep_generator.jl"))
 ```
 
-Once the generator is online, we can also launch the reduction runtime, using the following script.
+The generator has to receive two arguments, the resolution of the square region and the number of times the mandelbrot expression is applied to a point. e.g 1000 500 can be used as a trial.
 
-!!! Tip "Note"
-    It does not matter which program is executed first, the generator, the reducer or even the pipe builder.
+Once the generator is online, we can also launch the reduction runtime, using the following script. This is an MPI program therefore it should be launched with srun, mpiexec or any other tool of such nature appropiate for your installation.
 
 ```@eval
 Main.mdinclude(joinpath(Main.EXAMPLEROOT, "mandel","launch_runtime.jl"))
 ```
+
+!!! Tip "Note"
+    It does not matter which program is executed first, the generator, the reducer or even the pipe builder.
 
 Now we specify our reduction pipe, it will consist on:
  - An average reduction layer with a window of 10x10

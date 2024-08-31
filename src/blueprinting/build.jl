@@ -85,6 +85,19 @@ let
         pipe_id_counter += 1
         return pipe_id_counter
     end
+
+    """
+    Used to increment the counter up to the runtime counter to prevent the runtime
+    ignoring the launcher
+    """
+    global function update_to_runtime_latest(c :: Connection)
+        c_inverse = Connection(c.connection_location, true, 1)
+
+        r =_get(c_inverse, :ready)
+        pipe_id_counter = r isa Nothing ? pipe_id_counter : r
+
+        return pipe_id_counter
+    end
 end
 
 
@@ -99,6 +112,7 @@ function build(builder::PipelineBuilder, connection_location="connection")
 
 
     c = Connection(connection_location, false, 30)
+    update_to_runtime_latest(c)
 
     #ready = _get(c, :exec_ready)
     #@info "runtime detected ready = $ready"

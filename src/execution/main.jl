@@ -202,17 +202,11 @@ function main(connection_location :: String)
         # LISTEN FOR CONFIGURATION ARRIVAL
         ready(connection, 1)
         if !listen(connection, last_id)
-            error("Listen timeout, $TRIALS TODO DEPRECATED trials.")
+            @debug "No new pipes"
+            sleep(1)
+            continue
         end
 
-        new_id = ParallelReductionPipes._get(connection, :ready)
-        if new_id <= last_id
-            sleep(1)
-            @debug "No new pipes"
-            continue
-        else
-            last_id = new_id
-        end
 
         # Get pipeline config
         @debug "ON CONNECT"
