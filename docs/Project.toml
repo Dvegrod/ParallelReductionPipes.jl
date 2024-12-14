@@ -1,0 +1,4 @@
+[deps]
+ParallelReductionPipes = "071b913d-17cb-47fe-ac3b-24d020533912"
+DocExtensions = "cbdad009-89f1-4e05-85a0-06b07b50707d"
+Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"

@@ -4,5 +4,4 @@
 /Manifest.toml
 /docs/build/
 *.bp
-*.toml
 *.png
